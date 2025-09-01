@@ -1,0 +1,16 @@
+brands_id,item_name,description,short_description,item_code,cost,selling,mrp,discount,uom,status,item_type,qty
+1,Natural Rubber Latex,Natural Rubber Latex,Natural Rubber Latex,ITEM-R-001,1250,0,0,0,1,active,R,10
+1,Synthetic Rubber (SBR - Styrene Butadiene Rubber),Synthetic Rubber (SBR - Styrene Butadiene Rubber),Synthetic Rubber (SBR - Styrene Butadiene Rubber),ITEM-R-002,2100,0,0,0,1,active,R,10
+1,Butyl Rubber (IIR - Isobutylene Isoprene Rubber),Butyl Rubber (IIR - Isobutylene Isoprene Rubber),Butyl Rubber (IIR - Isobutylene Isoprene Rubber),ITEM-R-003,2500,0,0,0,1,active,R,10
+1,EPDM Rubber (Ethylene Propylene Diene Monomer),EPDM Rubber (Ethylene Propylene Diene Monomer),EPDM Rubber (Ethylene Propylene Diene Monomer),ITEM-R-004,1000,0,0,0,1,active,R,10
+1,Silicone Rubber Compound,Silicone Rubber Compound,Silicone Rubber Compound,ITEM-R-005,1050.45,0,0,0,1,active,R,10
+1,Carbon Black Filler,Carbon Black Filler,Carbon Black Filler,ITEM-R-006,2499.99,0,0,0,1,active,R,10
+1,Rubber Processing Oil,Rubber Processing Oil,Rubber Processing Oil,ITEM-R-007,700.5,0,0,0,1,active,R,10
+1,Vulcanization Agents (Sulfur & Accelerators),Vulcanization Agents (Sulfur & Accelerators),Vulcanization Agents (Sulfur & Accelerators),ITEM-R-008,945.25,0,0,0,1,active,R,10
+1,Automotive Rubber Seals,Automotive Rubber Seals,Automotive Rubber Seals,ITEM-F-001,5499.99,6500,6400,0.2,1,active,F,10
+1,Industrial Rubber Sheets,Industrial Rubber Sheets,Industrial Rubber Sheets,ITEM-F-002,3125.5,4500,4300,0,1,active,F,10
+1,Rubber Conveyor Belts,Rubber Conveyor Belts,Rubber Conveyor Belts,ITEM-F-003,2400,3000,2600,0,1,active,F,10
+1,Rubber O-Rings and Gaskets,Rubber O-Rings and Gaskets,Rubber O-Rings and Gaskets,ITEM-F-004,1080,1800,1500,0,1,inactive,F,10
+1,Rubber Hoses (High-Pressure & Industrial),Rubber Hoses (High-Pressure & Industrial),Rubber Hoses (High-Pressure & Industrial),ITEM-F-005,1875,2900,2000,0,1,active,F,10
+1,Rubber Footwear (Soles & Sandals),Rubber Footwear (Soles & Sandals),Rubber Footwear (Soles & Sandals),ITEM-F-006,4125,5100,4500,0.1,1,active,F,10
+1,Rubber Gloves (Medical & Industrial Use),Rubber Gloves (Medical & Industrial Use),Rubber Gloves (Medical & Industrial Use),ITEM-F-007,345.55,600,400,0,1,active,F,10

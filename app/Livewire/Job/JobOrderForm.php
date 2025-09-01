@@ -1,0 +1,914 @@
+<?php
+
+namespace App\Livewire\Job;
+
+use App\Helpers\NumberGenerator;
+use App\Models\Branch;
+use App\Models\Customer;
+use App\Models\DispatchItem;
+use App\Models\Invoice;
+use App\Models\Item;
+use Livewire\Component;
+use App\Models\JobOrder;
+use App\Models\JobOrderItem;
+use App\Models\Stock;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class JobOrderForm extends Component
+{
+
+    public $branch_code, $dispatchedCount = 0, $status, $customer_po_number, $authUser, $jobOrderId, $job_number, $date_created, $customer_id, $branch_id, $description, $special_instruction, $printout, $plate_backing = false, $backing_qty = 1;
+    public $job_done_by, $job_checked_by, $color_print, $delivery_date;
+    public $searchCustomer;
+    public $searchResultsCustomer;
+    public $defaultResult = false;
+    public $customer_name, $customer_address, $customer_phone, $customer_email, $customer_city;
+    public $searchTerm = '';
+    public $searchResults = [];
+    public $dispatchedItems = [];
+    public $stockProcess = true;
+    public $total_amount;
+    public $customerDue = 0;
+    public array $branchOptions = [];
+    public bool $showBranchDropdown = false;
+    public ?int $selectedBranchId = null;
+
+    protected $rules = [
+        'customer_id' => 'required|exists:customers,id',
+        'description' => 'required|string|max:255',
+        'special_instruction' => 'nullable|string|max:255',
+        'job_done_by' => 'nullable|exists:users,id',
+        'job_checked_by' => 'nullable|exists:users,id',
+        'color_print' => 'nullable|boolean',
+        // 'delivery_date' => 'nullable|date|after_or_equal:today',
+    ];
+
+    public function mount($jobOrderId = null)
+    {
+        $this->authUser = auth()->user();
+        $this->branch_id = $this->authUser->branch_id;
+
+        $this->branch_code = optional(Branch::find($this->authUser->branch_id))->branch_code ?? 'N/A';
+
+        $this->delivery_date = now()->toDateString();
+        $this->date_created = now()->toDateString();
+
+        // Log component initialization
+        Log::channel('job_order_log')->info('JobOrderForm component initialized', [
+            'user_id' => $this->authUser->id,
+            'user_name' => $this->authUser->name,
+            'branch_id' => $this->branch_id,
+            'branch_code' => $this->branch_code,
+            'job_order_id' => $jobOrderId,
+            'mode' => $jobOrderId ? 'edit' : 'create'
+        ]);
+
+        if ($jobOrderId) {
+
+            $this->jobOrderId = $jobOrderId;
+            $jobOrder = JobOrder::with('orderItems', 'customer', 'orderItems.item')->findOrFail($jobOrderId);
+
+            // Log job order loading
+            Log::channel('job_order_log')->info('Job order loaded for editing', [
+                'job_order_id' => $jobOrderId,
+                'job_number' => $jobOrder->job_number,
+                'customer_id' => $jobOrder->customer_id,
+                'current_status' => $jobOrder->status,
+                'user_id' => $this->authUser->id
+            ]);
+
+            if (in_array($jobOrder->status, ['printing', 'dispatching', 'dispatched'])) {
+
+                $jobOrder->previous_status = $jobOrder->status;
+                if ($this->authUser->mode === 'dispatch') {
+                    $jobOrder->status = 'paused';
+                }
+                $jobOrder->save();
+
+                // Log status change
+                Log::channel('job_order_log')->info('Job order status changed to paused', [
+                    'job_order_id' => $jobOrderId,
+                    'job_number' => $jobOrder->job_number,
+                    'previous_status' => $jobOrder->previous_status,
+                    'new_status' => $jobOrder->status,
+                    'user_id' => $this->authUser->id,
+                    'user_mode' => $this->authUser->mode
+                ]);
+            }
+
+            //gete teh dispatched items
+            $this->dispatchedItems = DispatchItem::with('item')
+                ->where('order_id', $jobOrderId)
+                ->get();
+
+            // Job Order data
+            $this->job_number = $jobOrder->job_number;
+            $this->date_created = optional($jobOrder->date_created)->toDateString();
+            $this->customer_id = $jobOrder->customer_id;
+            $this->branch_id = $jobOrder->branch_id;
+            $this->description = $jobOrder->description;
+            $this->customer_po_number = $jobOrder->customer_po_number;
+            $this->special_instruction = $jobOrder->special_instruction;
+            $this->job_done_by = $jobOrder->job_done_by;
+            $this->job_checked_by = $jobOrder->job_checked_by;
+            $this->delivery_date = optional($jobOrder->delivery_date)->toDateString();
+            $this->plate_backing = $jobOrder->plate_backing;
+            $this->backing_qty = $jobOrder->backing_qty;
+            $this->total_amount = $jobOrder->total_amount;
+
+            // Customer details
+            $this->customer_name = $jobOrder->customer->name ?? '';
+            $this->customer_address = $jobOrder->customer->address ?? '';
+            $this->customer_phone = $jobOrder->customer->phone ?? '';
+            $this->customer_email = $jobOrder->customer->email ?? '';
+            $this->customer_city = $jobOrder->customer->city ?? '';
+
+            // Load job order items
+            $this->jobOrderItems = $jobOrder->orderItems->map(function ($item) {
+                //get the dispatch count
+                $this->dispatchedCount = DB::table('dispatch_items')
+                    ->where('order_id', $item->order_id)
+                    ->where('item_id', $item->item_id)
+                    ->sum('quantity');
+
+                return [
+                    'id' => $item->id,
+                    'item_id' => $item->item_id,
+                    'name' => $item->item->item_name ?? '',
+                    'code' => $item->item->item_code ?? '',
+                    'selling_price' => $item->price,
+                    'purchase_price' => $item->item->purchase_price ?? 0,
+                    'quantity' => $item->quantity - $this->dispatchedCount,
+                    'dispatchedCount' => $this->dispatchedCount,
+                    'total' => $item->total,
+                ];
+            })->toArray();
+        }
+        $this->branchOptions = Branch::all(['id', 'branch_code', 'branch_name'])->toArray();
+    }
+
+
+
+    public function updatedSearchTerm()
+    {
+        if (strlen($this->searchTerm) >= 1) {
+            $items = Item::where(function ($query) {
+                $query->where('item_name', 'like', "{$this->searchTerm}%")
+                    ->orWhere('item_code', 'like', "{$this->searchTerm}%");
+            })
+                // ->when($this->authUser->mode !== 'admin', function ($query) {
+                //     $query->where('branch_id', $this->authUser->branch_id);
+                // })
+                ->limit(5)
+                ->get();
+
+            $this->searchResults = $items->map(function ($item) {
+
+                // $stockBalance = Stock::where('items_id', $item->id)->sum('quantity') ?? 0;
+                // $stockBalance = Stock::when($this->authUser->mode !== 'admin', function ($query) {
+                //     $query->where('branch_id', $this->authUser->branch_id);
+                // })
+                $stockBalance = Stock::where('branch_id', $this->authUser->branch_id)
+                    ->where('items_id', $item->id)
+                    ->sum('quantity') ?? 0;
+
+
+                if ($stockBalance == 0) {
+                    $this->stockProcess = false;
+                }
+                return [
+                    'id' => $item->id,
+                    'item_name' => $item->item_name,
+                    'item_code' => $item->item_code,
+                    'selling_price' => $item->sales_price,
+                    'purchase_price' => $item->purchase_price,
+                    'brands_id' => $item->brands_id,
+                    'quantity' => $stockBalance > 0 ? 1 : 0,
+                    'stock_balance' => $stockBalance,
+                ];
+            })->toArray();
+        } else {
+            $this->searchResults = [];
+        }
+    }
+
+    public $selectedItemId;
+    public $jobOrderItems  = [];
+    public function addOrderItem($itemId)
+    {
+        $this->selectedItemId = $itemId;
+        $item = Item::find($this->selectedItemId);
+
+        // Log item addition attempt
+        Log::channel('job_order_log')->info('Attempting to add item to job order', [
+            'item_id' => $itemId,
+            'item_name' => $item->item_name ?? 'Unknown',
+            'user_id' => $this->authUser->id,
+            'job_order_id' => $this->jobOrderId
+        ]);
+
+        if ($item) {
+            // Check if the item already exists in the jobOrderItems array
+            $existingItemKey = null;
+            foreach ($this->jobOrderItems as $index => $jobOrderItem) {
+                if ($jobOrderItem['item_id'] == $item->id) {
+                    $existingItemKey = $index;
+                    break;
+                }
+            }
+            $stockBalance = Stock::where('items_id', $item->id)->sum('quantity') ?? 0;
+            if ($stockBalance == 0) {
+                $this->stockProcess = false;
+            }
+
+            if ($existingItemKey !== null) {
+                if ($stockBalance < $this->jobOrderItems[$existingItemKey]['quantity'] + 1) {
+                    Log::channel('job_order_log')->warning('Stock insufficient for item quantity increase', [
+                        'item_id' => $itemId,
+                        'item_name' => $item->item_name,
+                        'current_quantity' => $this->jobOrderItems[$existingItemKey]['quantity'],
+                        'stock_balance' => $stockBalance,
+                        'user_id' => $this->authUser->id
+                    ]);
+                    session()->flash('error', 'Quantity cannot exceed available stock since the available stock balance is  (' . $stockBalance . ')');
+                } else {
+                    $oldQuantity = $this->jobOrderItems[$existingItemKey]['quantity'];
+                    $this->jobOrderItems[$existingItemKey]['quantity'] += 1; // Increment quantity by 1
+                    // Update the total for the item based on the updated quantity
+                    $this->jobOrderItems[$existingItemKey]['total'] = $this->jobOrderItems[$existingItemKey]['quantity'] * $this->jobOrderItems[$existingItemKey]['selling_price'];
+
+                    Log::channel('job_order_log')->info('Item quantity increased', [
+                        'item_id' => $itemId,
+                        'item_name' => $item->item_name,
+                        'old_quantity' => $oldQuantity,
+                        'new_quantity' => $this->jobOrderItems[$existingItemKey]['quantity'],
+                        'new_total' => $this->jobOrderItems[$existingItemKey]['total'],
+                        'user_id' => $this->authUser->id
+                    ]);
+                }
+
+                // If the item exists, update the quantity
+
+            } else {
+                // If the item does not exist, add it to the array
+                if ($stockBalance == 0) {
+                    Log::channel('job_order_log')->warning('Attempted to add item with zero stock', [
+                        'item_id' => $itemId,
+                        'item_name' => $item->item_name,
+                        'stock_balance' => $stockBalance,
+                        'user_id' => $this->authUser->id
+                    ]);
+                    session()->flash('error', 'Quantity cannot exceed available stock since the available stock balance is (0)');
+                }
+                $this->jobOrderItems[] = [
+                    'id' => $item->id,
+                    'item_id' => $item->id,
+                    'name' => $item->item_name,
+                    'code' => $item->item_code,
+                    'selling_price' => $item->sales_price,
+                    'purchase_price' => $item->purchase_price,
+                    'quantity' => $stockBalance > 0 ? 1 : 0,
+                    'total' => $stockBalance > 0 ? $item->sales_price : 0.00,
+                ];
+
+                Log::channel('job_order_log')->info('New item added to job order', [
+                    'item_id' => $itemId,
+                    'item_name' => $item->item_name,
+                    'item_code' => $item->item_code,
+                    'selling_price' => $item->sales_price,
+                    'quantity' => $stockBalance > 0 ? 1 : 0,
+                    'stock_balance' => $stockBalance,
+                    'user_id' => $this->authUser->id
+                ]);
+            }
+
+            // Call calculateTotal or any other necessary function
+            $this->calculateTotal();
+
+            // Clear the search term and results
+            $this->searchTerm = '';
+            $this->searchResults = [];
+        } else {
+            Log::channel('job_order_log')->error('Item not found when attempting to add to job order', [
+                'item_id' => $itemId,
+                'user_id' => $this->authUser->id
+            ]);
+        }
+    }
+
+
+    public function updateTotal($index)
+    {
+        // Get the item from the job order items array
+        $item = $this->jobOrderItems[$index];
+
+        // Get the stock balance for the specific item
+        $stockBalance = Stock::where('items_id', $item['item_id'])->sum('quantity') ?? 0;
+
+        $orderItemsCount = JobOrderItem::where('order_id', $this->jobOrderId)
+            ->where('item_id', $item['item_id'])
+            ->value('quantity');
+
+        $this->dispatchedCount = DB::table('dispatch_items')
+            ->where('order_id', $this->jobOrderId)
+            ->where('item_id', $item['item_id'])
+            ->where('status', 'dispatched')
+            ->sum('quantity');
+
+        Log::channel('job_order_log')->info('Job order loaded for editing dispatched count', [
+            'job_order_id' => $this->dispatchedCount
+        ]);
+
+        // Check if the quantity entered is greater than the stock balance
+        if ($item['quantity'] > $stockBalance) {
+            session()->flash('error', 'Quantity cannot exceed available stock since the available stock balance is  (' . $stockBalance . ')');
+            // Optionally, reset the quantity to the stock balance to prevent overselling
+            $this->jobOrderItems[$index]['quantity'] = $stockBalance;
+            return;
+        }
+
+        // Ensure dispatched count doesn't exceed order items count
+        if ($this->dispatchedCount > $orderItemsCount) {
+            session()->flash('error', 'Dispatched count cannot exceed order items count');
+            return;
+        }
+
+        Log::channel('job_order_log')->info('Item qty and dispatched count for validation', [
+            'dispatched_count' => $this->dispatchedCount,
+            'item_count' => $item['quantity']
+        ]);
+
+        // Handle negative quantities, ensure it's not less than dispatched count
+        if ($item['quantity'] < 0) {
+            // Calculate the remaining quantity that can still be decreased
+            $remainingQuantity = $orderItemsCount - $this->dispatchedCount;
+
+            // Validate that absolute value of quantity doesn't exceed the remaining quantity
+            if (abs($item['quantity']) > $remainingQuantity) {
+                session()->flash('error', 'Negative quantity cannot exceed the remaining quantity that can be reduced');
+                return;
+            }
+        }
+
+        // Update the total for the specific item based on the new quantity
+        $this->jobOrderItems[$index]['total'] = abs($this->jobOrderItems[$index]['quantity'] * $this->jobOrderItems[$index]['selling_price']);
+
+        // Optionally, recalculate the overall total amount
+        $this->calculateTotal();
+    }
+
+
+
+    public function __updateTotal($index)
+    {
+        // Get the item from the job order items array
+        $item = $this->jobOrderItems[$index];
+
+        // Get the stock balance for the specific item
+        $stockBalance = Stock::where('items_id', $item['item_id'])->sum('quantity') ?? 0;
+
+        $orderItemsCount = JobOrderItem::where('order_id', $this->jobOrderId)
+            ->where('item_id', $item['item_id'])
+            ->value('quantity');
+
+        $this->dispatchedCount = DB::table('dispatch_items')
+            ->where('order_id', $this->jobOrderId)
+            ->where('item_id', $item['item_id'])
+            ->where('status', 'dispatched')
+            ->sum('quantity');
+
+
+
+        Log::channel('job_order_log')->info('Job order loaded for editing dispatched count', [
+            'job_order_id' => $this->dispatchedCount
+        ]);
+
+        // Check if the quantity entered is greater than the stock balance
+        if ($item['quantity'] > $stockBalance) {
+            session()->flash('error', 'Quantity cannot exceed available stock since the available stock balance is  (' . $stockBalance . ')');
+            // Optionally, reset the quantity to the stock balance to prevent overselling
+            $this->jobOrderItems[$index]['quantity'] = $stockBalance;
+            // Return to prevent further processing
+            // return;
+        }
+
+        Log::channel('job_order_log')->info('Item qty and dispatched count for validation', [
+            'dispatched_count' => $this->dispatchedCount,
+            'item_count' => $item['quantity']
+        ]);
+
+
+        if ($item['quantity'] < $this->dispatchedCount) {
+            $this->jobOrderItems[$index]['quantity'] = $item['quantity'];
+            session()->flash('error', 'Quantity cannot exceed already dispatched count');
+
+            // Optionally, reset the quantity to the stock balance to prevent overselling
+            //$this->jobOrderItems[$index]['quantity'] = $this->dispatchedCount;
+
+            // Return to prevent further processing
+            // return;
+        }
+
+        // Update the total for the specific item based on the new quantity
+        // Ensure quantity is always positive
+        $this->jobOrderItems[$index]['total'] = abs($this->jobOrderItems[$index]['quantity'] * $this->jobOrderItems[$index]['selling_price']);
+
+        // Optionally, recalculate the overall total amount
+        $this->calculateTotal();
+    }
+
+    public function calculateTotal()
+    {
+        $this->total_amount = abs(num: array_sum(array_column($this->jobOrderItems, 'total')));
+    }
+
+
+    public function assignCustomer($customerId)
+    {
+        // Find the customer using the provided customer ID
+        $customer = Customer::find($customerId);
+        if (!$customer) {
+            return response()->json(['error' => 'Customer not found'], 404);
+        }
+
+
+        $this->customerDue =  Invoice::where('customer_id', $customerId)
+            ->sum('total_amount');
+
+        $this->customer_id = $customer->id;
+        $this->searchResultsCustomer = [];
+        $this->searchCustomer = $customer->name;
+        $this->customer_name = $customer->name;
+        $this->customer_address =  $customer->address;
+        $this->customer_phone =  $customer->phone;
+        $this->customer_email =  $customer->email;
+        $this->customer_city =  $customer->city;
+        return response()->json(['message' => 'Customer assigned successfully'], 200);
+    }
+
+    public function updatedSearchCustomer()
+    {
+        if (strlen($this->searchCustomer) >= 1) {
+            $customer = Customer::where('status', 'active')
+                ->where(function ($query) {
+                    $query->where('name', 'like', "{$this->searchCustomer}%")
+                        ->orWhere('email', 'like', "{$this->searchCustomer}%");
+                })
+                ->when($this->authUser->mode !== 'admin', function ($query) {
+                    $query->where('branch_id', $this->branch_id);
+                    $query->where('status', 'active');
+                })
+                ->limit(5)
+                ->get();
+
+            $this->searchResultsCustomer = $customer->map(function ($customer) {
+                return [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                    'city' => $customer->city,
+                ];
+            })->toArray();
+
+            Log::info('Search Results: ' . json_encode($this->searchResultsCustomer));
+        } else {
+            $this->searchResultsCustomer = [];
+            $this->defaultResult = false;
+            Log::info('Search Results Cleared');
+        }
+    }
+
+
+    public function save()
+    {
+        try {
+            $this->validate();
+
+            // Update mode
+            if ($this->jobOrderId) {
+                $jobOrder = JobOrder::findOrFail($this->jobOrderId);
+
+                //Restore status if paused and user is admin
+                if (
+                    $jobOrder->status === 'paused' &&
+                    ($this->authUser->mode === 'admin' || $this->authUser->mode === 'manager') &&
+                    !empty($jobOrder->previous_status)
+                ) {
+                    // Update the status of the job order
+                    $jobOrder->status = ($jobOrder->previous_status === 'dispatched') ? 'dispatching' : $jobOrder->previous_status;
+
+                    // Update the status of JobOrderItem with the same logic
+                    JobOrderItem::where('order_id', $this->jobOrderId)->update([  // use order_id instead of job order id for consistency
+                        'status' => ($jobOrder->previous_status === 'dispatched') ? 'dispatching' : $jobOrder->previous_status
+                    ]);
+
+                    // Reset the previous status after updating
+                    $jobOrder->previous_status = null;
+                }
+
+                // Update all other fields
+                $jobOrder->update([
+                    'customer_po_number' => $this->customer_po_number,
+                    'user_id' => $this->authUser->id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->authUser->branch->id,
+                    'description' => $this->description,
+                    'special_instruction' => $this->special_instruction,
+                    'job_done_by' => $this->job_done_by,
+                    'job_checked_by' => $this->job_checked_by,
+                    'delivery_date' => $this->delivery_date,
+                    'plate_backing' => $this->plate_backing,
+                    'backing_qty' => $this->backing_qty,
+                    'total_amount' => $this->total_amount,
+                    'status' => $jobOrder->status, // already updated above
+                    'previous_status' => $jobOrder->previous_status, // cleared above
+                ]);
+            }
+            // Create mode
+            else {
+                $jobNumber = NumberGenerator::generateJobOrderNumber($this->authUser->branch_id);
+                $jobOrder = JobOrder::create([
+                    'job_number' => $jobNumber,
+                    'date_created' => Carbon::now(),
+                    'user_id' => $this->authUser->id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->authUser->branch->id,
+                    'invoice_branch' => $this->selectedBranchId,
+                    'description' => $this->description,
+                    'customer_po_number' => $this->customer_po_number,
+                    'special_instruction' => $this->special_instruction,
+                    'job_done_by' => $this->job_done_by,
+                    'job_checked_by' => $this->job_checked_by,
+                    'delivery_date' => $this->delivery_date,
+                    'plate_backing' => $this->plate_backing,
+                    'backing_qty' => $this->backing_qty,
+                    'total_amount' => $this->total_amount,
+                    'status' => 'pending'
+                ]);
+            }
+
+            // Validate and save items
+            foreach ($this->jobOrderItems as $item) {
+
+                // Get dispatched count for the item
+                $dispatchedCount = DB::table('dispatch_items')
+                    ->where('order_id', $this->jobOrderId)
+                    ->where('item_id', $item['item_id'])
+                    ->sum('quantity');
+
+                // Get job order item count
+                $jobOrderItemCount = JobOrderItem::where('order_id', $jobOrder->id)->where('item_id', $item['item_id'])->value('quantity');
+
+                $quantity = $item['quantity'];
+
+                // Handle validation for negative quantities
+                if ($item['quantity'] < 0) {
+                    // Calculate the remaining quantity that can still be reduced
+                    $remainingQuantity = $jobOrderItemCount - $dispatchedCount;
+
+                    // Ensure the absolute value of the quantity does not exceed the remaining quantity
+                    if (abs($item['quantity']) > $remainingQuantity) {
+                        session()->flash('error', 'Negative quantity cannot exceed the remaining quantity that can be reduced');
+                        return;
+                    }
+                }
+
+                // Proceed with saving the item if validation is passed
+                if ($jobOrderItemCount - $dispatchedCount != $item['quantity']) {
+
+                    if ($jobOrderItemCount > 0) {
+                        $quantity = $jobOrderItemCount + $item['quantity'];
+                    }
+
+                    try {
+                        $jobOrderItem = JobOrderItem::updateOrCreate([
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                        ], [
+                            'quantity' => $quantity,
+                            'price' => $item['selling_price'],
+                            'total' => $item['total'],
+                        ]);
+                        // Optional: Log or debug to check if it worked
+                        Log::info('JobOrderItem saved/updated', [
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                            'quantity' => $item['quantity'],
+                            'price' => $item['selling_price'],
+                            'total' => $item['total'],
+                            'jobOrderItem_id' => $jobOrderItem->id ?? null,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Error saving JobOrderItem', [
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                            'error' => $e->getMessage(),
+                        ]);
+                        session()->flash('error', 'Error saving job order item: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            session()->flash('success', $this->jobOrderId ? 'Job successfully updated.' : 'Job successfully created.');
+
+            $this->reset();
+            return $this->redirect('/job-orders', navigate: true);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::channel('job_order_log')->info('Validation Errors', $e->errors());
+            session()->flash('error', collect($e->errors())->flatten()->first());
+        } catch (\Exception $e) {
+            Log::channel('job_order_log')->error('Error saving job: ' . $e->getMessage(), [
+                'error_message' => $e->getMessage(),
+                'jobOrderItems' => $this->jobOrderItems,
+                'customer_id' => $this->customer_id,
+            ]);
+
+            session()->flash('error', 'Error saving job: ' . $e->getMessage());
+        }
+    }
+
+
+    public function __save()
+    {
+
+
+        try {
+            $this->validate();
+
+
+
+            // Update mode
+            if ($this->jobOrderId) {
+                $jobOrder = JobOrder::findOrFail($this->jobOrderId);
+
+                //Restore status if paused and user is admin
+                if (
+                    $jobOrder->status === 'paused' &&
+                    ($this->authUser->mode === 'admin' || $this->authUser->mode === 'manager') &&
+                    !empty($jobOrder->previous_status)
+                ) {
+                    // Update the status of the job order
+                    $jobOrder->status = ($jobOrder->previous_status === 'dispatched') ? 'dispatching' : $jobOrder->previous_status;
+
+                    // Update the status of JobOrderItem with the same logic
+                    JobOrderItem::where('order_id', $this->jobOrderId)->update([  // use order_id instead of job order id for consistency
+                        'status' => ($jobOrder->previous_status === 'dispatched') ? 'dispatching' : $jobOrder->previous_status
+                    ]);
+
+                    // Reset the previous status after updating
+                    $jobOrder->previous_status = null;
+                }
+
+
+                // Update all other fields
+                $jobOrder->update([
+                    'customer_po_number' => $this->customer_po_number,
+                    'user_id' => $this->authUser->id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->authUser->branch->id,
+                    'description' => $this->description,
+                    'special_instruction' => $this->special_instruction,
+                    'job_done_by' => $this->job_done_by,
+                    'job_checked_by' => $this->job_checked_by,
+                    'delivery_date' => $this->delivery_date,
+                    'plate_backing' => $this->plate_backing,
+                    'backing_qty' => $this->backing_qty,
+                    'total_amount' => $this->total_amount,
+                    'status' => $jobOrder->status, // already updated above
+                    'previous_status' => $jobOrder->previous_status, // cleared above
+                ]);
+            }
+            // Create mode
+            else {
+                $jobNumber = NumberGenerator::generateJobOrderNumber($this->authUser->branch_id);
+                $jobOrder = JobOrder::create([
+                    'job_number' => $jobNumber,
+                    'date_created' => Carbon::now(),
+                    'user_id' => $this->authUser->id,
+                    'customer_id' => $this->customer_id,
+                    'branch_id' => $this->authUser->branch->id,
+                    'invoice_branch' => $this->selectedBranchId,
+                    'description' => $this->description,
+                    'customer_po_number' => $this->customer_po_number,
+                    'special_instruction' => $this->special_instruction,
+                    'job_done_by' => $this->job_done_by,
+                    'job_checked_by' => $this->job_checked_by,
+                    'delivery_date' => $this->delivery_date,
+                    'plate_backing' => $this->plate_backing,
+                    'backing_qty' => $this->backing_qty,
+                    'total_amount' => $this->total_amount,
+                    'status' => 'pending'
+                ]);
+            }
+
+
+            //    if ($this->authUser->mode != 'admin') {
+
+            // Common logic: save items
+            foreach ($this->jobOrderItems as $item) {
+
+                $dispatchedCount = DB::table('dispatch_items')
+                    ->where('order_id', $this->jobOrderId)
+                    ->where('item_id', $item['item_id'])
+                    ->sum('quantity');
+
+                $jobOrderItemCount = JobOrderItem::where('order_id', $jobOrder->id)->where('item_id', $item['item_id'])->value('quantity');
+
+                $quantity = $item['quantity'];
+
+                //dd();
+
+                if ($jobOrderItemCount - $dispatchedCount != $item['quantity']) {
+
+                    if ($jobOrderItemCount > 0) {
+                        $quantity = $jobOrderItemCount + $item['quantity'];
+                    }
+
+                    //dd($quantity);
+
+                    try {
+                        $jobOrderItem = JobOrderItem::updateOrCreate([
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                        ], [
+                            'quantity' =>   $quantity,
+                            'price' => $item['selling_price'],
+                            'total' => $item['total'],
+                        ]);
+                        // Optional: Log or debug to check if it worked
+                        Log::info('JobOrderItem saved/updated', [
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                            'quantity' => $item['quantity'],
+                            'price' => $item['selling_price'],
+                            'total' => $item['total'],
+                            'jobOrderItem_id' => $jobOrderItem->id ?? null,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Error saving JobOrderItem', [
+                            'order_id' => $jobOrder->id,
+                            'item_id' => $item['item_id'],
+                            'error' => $e->getMessage(),
+                        ]);
+                        session()->flash('error', 'Error saving job order item: ' . $e->getMessage());
+                    }
+                }
+            }
+            // }
+
+            session()->flash('success', $this->jobOrderId ? 'Job successfully updated.' : 'Job successfully created.');
+
+            $this->reset();
+            return $this->redirect('/job-orders', navigate: true);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::channel('job_order_log')->info('Validation Errors', $e->errors());
+            session()->flash('error', collect($e->errors())->flatten()->first());
+        } catch (\Exception $e) {
+
+            Log::channel('job_order_log')->error('Error saving job: ' . $e->getMessage(), [
+                'error_message' => $e->getMessage(),
+                'jobOrderItems' => $this->jobOrderItems,
+                'customer_id' => $this->customer_id,
+            ]);
+
+            session()->flash('error', 'Error saving job: ' . $e->getMessage());
+        }
+    }
+
+
+
+
+
+    public function generateJobNumber()
+    {
+        $today = Carbon::today()->format('Ymd');  // Get today's date in 'YYYYMMDD' format
+        $userId = auth()->user()->id;  // Get the current authenticated user's ID
+
+        // Get the last job number created today for this user
+        $lastJob = JobOrder::where('job_number', 'like', "{$userId}-{$today}-%")
+            ->orderBy('job_number', 'desc')
+            ->first();
+
+        // Check if there is a last job for today and increment the number
+        if ($lastJob) {
+            // Get the last three digits of the job number and increment it
+            $lastNumber = substr($lastJob->job_number, -3); // Extract last 3 digits
+            $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);  // Increment and pad with zeroes
+        } else {
+            // If no jobs for today, start with 001
+            $nextNumber = '001';
+        }
+
+        // Create the job number using user ID, today's date, and the next sequential number
+        $jobNumber = "{$userId}-{$today}-{$nextNumber}";
+
+        return $jobNumber;
+    }
+
+
+
+    // public function removeItem($index, $id)
+    // {
+    //     $jobOrderItem = JobOrderItem::find($id);
+
+    //     if (!$jobOrderItem) {
+    //         // session()->flash('error', 'Item not found.');
+    //         // return;
+    //         $this->removeFromJobOrderItems($index);
+    //     } else {
+    //         // Check if the item is already dispatched
+    //         $count = DispatchItem::where('job_order_item_id', $jobOrderItem->id)->count();
+    //         if ($count > 0) {
+    //             session()->flash('error', 'Cannot delete the item since it is already dispatched!');
+    //             return;
+    //         }
+    //         // Proceed to delete
+    //         $jobOrderItem->delete();
+    //         $this->removeFromJobOrderItems($index);
+    //     }
+    // }
+
+
+    public function removeItem(int $index, int $id): void
+    {
+        // Try to find the job order item.
+        $jobOrderItem = JobOrderItem::find($id);
+
+        // If the item doesn't exist in the database,
+        // remove it from the local array and exit.
+        if (!$jobOrderItem) {
+            $this->removeFromJobOrderItems($index);
+            return;
+        }
+
+        // Check if the item has already been dispatched.
+        // $dispatchedCount = DispatchItem::where('job_order_item_id', $jobOrderItem->id)->count();
+        // if ($dispatchedCount > 0) {
+        //     session()->flash('error', 'Cannot delete the item since it is already dispatched!');
+        //     return;
+        // }
+
+        // Delete the item from the database.
+        $jobOrderItem->delete();
+
+        // log that the item was removed.
+        Log::channel('job_order_log')->info("Job Order item #{$id} was removed by {$this->authUser->name}.");
+
+        // Remove the item from the local array.
+        $this->removeFromJobOrderItems($index);
+
+        // success message.
+        session()->flash('success', 'Item successfully removed.');
+    }
+
+
+
+    public function removeFromJobOrderItems($index)
+    {
+
+        if ($index !== false) {
+            // Remove the item at that index from the array
+            unset($this->jobOrderItems[$index]);
+        }
+
+        // Reindex the array to ensure proper indexing
+        $this->jobOrderItems = array_values($this->jobOrderItems);
+    }
+
+
+    public function selectBranch(int $branchId): void
+    {
+        $this->selectedBranchId = $branchId;
+    }
+
+    public function changeWorkingBranch(): void
+    {
+        $this->branch_id = $this->selectedBranchId;
+
+        $branch = Branch::find($this->selectedBranchId);
+        $this->branch_code = $branch ? $branch->branch_code : null;
+
+        $this->showBranchDropdown = false;
+
+        session()->flash('success', 'Branch updated successfully. Stock will be adjusted accordingly.');
+    }
+
+
+    public function render()
+    {
+        $bodyAttributes = 'x-data="{ page: \'jobOrder\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
+        x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
+                $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
+        :class="{\'dark bg-gray-900\': darkMode === true}"';
+
+        $customers = Customer::all();
+        $users = User::all();
+
+        return view('livewire.job.job-order', ['customers' =>  $customers, 'users' => $users])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
+    }
+}

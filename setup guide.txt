@@ -1,0 +1,26 @@
+composer create-project laravel/laravel jetstream-livewire-app "^11.0"
+composer require laravel/Jetstream
+php artisan jetstream:install livewire --dark
+
+config env
+
+npm install
+npm run build
+
+/app/Providers/AppServiceProvider.php
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Bootstrap any application services.
+ *
+ * @return void
+ */
+public function boot()
+{
+    Schema::defaultStringLength(191);
+}
+
+php artisan migrate
+
+
+
