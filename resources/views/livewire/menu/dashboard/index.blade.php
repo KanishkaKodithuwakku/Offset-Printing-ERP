@@ -4,7 +4,7 @@
                     <span class="menu-group-title" :class="sidebarToggle ? 'lg:hidden' : ''">
                         DASHBOARD
                     </span>
-                    
+
                     <svg :class="sidebarToggle ? 'lg:block hidden' : 'hidden'"
                         class="mx-auto fill-current menu-group-icon" width="24" height="24" viewBox="0 0 24 24"
                         fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -34,6 +34,29 @@
                                 Dashboard
                             </span>
 
+
+                        </a>
+
+
+
+
+                    </li>
+                    <li>
+                        <a href="{{ route('advanced-dashboard') }}"
+                            class="menu-item group"
+                            :class="(selected === 'AdvancedDashboard') || (page === 'advanced-dashboard') ?
+                            'menu-item-active' : 'menu-item-inactive'">
+                            <svg :class="(selected === 'AdvancedDashboard') || (page === 'advanced-dashboard') ?
+                            'menu-item-icon-active' : 'menu-item-icon-inactive'"
+                                width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd"
+                                    d="M12.75 3.25C12.75 2.83579 12.4142 2.5 12 2.5C11.5858 2.5 11.25 2.83579 11.25 3.25V11.25H3.25C2.83579 11.25 2.5 11.5858 2.5 12C2.5 12.4142 2.83579 12.75 3.25 12.75H11.25V20.75C11.25 21.1642 11.5858 21.5 12 21.5C12.4142 21.5 12.75 21.1642 12.75 20.75V12.75H20.75C21.1642 12.75 21.5 12.4142 21.5 12C21.5 11.5858 21.1642 11.25 20.75 11.25H12.75V3.25Z"
+                                    fill="" />
+                            </svg>
+                            <span class="text-sm menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                                Advanced Dashboard
+                            </span>
 
                         </a>
 
