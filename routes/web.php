@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Dashboard;
+use App\Livewire\AdvancedDashboard;
 use App\Livewire\Grn\GrnForm;
 use App\Livewire\Grn\GrnList;
 use App\Livewire\Uom\DotMatrixPrint;
@@ -87,6 +88,8 @@ use Illuminate\Http\Request;
 //     ->name('dotmatrix.print');
 
 Route::get('/backup-database', [BackupController::class, 'backupDatabase'])->name('backup.database');
+
+Route::get('/advanced-dashboard', AdvancedDashboard::class)->name('advanced-dashboard');
 
 Route::middleware([
     'auth:sanctum',
@@ -249,6 +252,10 @@ Route::middleware([
     return view('livewire.check-management.print', ['cheques' => $cheques]);
 })->name('check-management.print');
 
+// Monthly Targets Routes
+Route::get('/monthly-targets', \App\Livewire\MonthlyTarget\MonthlyTargetList::class)->name('monthly-targets.index');
+Route::get('/monthly-targets/create', \App\Livewire\MonthlyTarget\MonthlyTargetForm::class)->name('monthly-targets.create');
+Route::get('/monthly-targets/{id}/edit', \App\Livewire\MonthlyTarget\MonthlyTargetEdit::class)->name('monthly-targets.edit');
 
 
 
