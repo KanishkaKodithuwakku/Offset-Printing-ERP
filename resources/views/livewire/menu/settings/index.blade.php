@@ -63,7 +63,7 @@
                                             'menu-dropdown-item-inactive'">
                                         Uom List
                                         <span class="absolute right-3 flex items-center gap-1">
-                                            
+
                                         </span>
                                     </a>
                                 </li>
@@ -72,5 +72,57 @@
                         <!-- Dropdown Menu End -->
                     </li>
                     <!-- Menu Item Uom -->
+                    <!-- Menu Item Monthly Targets -->
+                    <li>
+                        <a href="#" @click.prevent="selected = (selected === 'MonthlyTargets' ? '' : 'MonthlyTargets')" class="menu-item group"
+                            :class="(selected === 'MonthlyTargets') || (page === 'monthly-targets') ?
+                                        'menu-item-active' : 'menu-item-inactive'">
+
+                            <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                                Monthly Targets
+                            </span>
+
+                            <svg class="menu-item-arrow" :class="[(selected === 'MonthlyTargets') ? 'menu-item-arrow-active' : 'menu-item-arrow-inactive',
+                                            sidebarToggle ? 'lg:hidden' : ''
+                                        ]" width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4.79175 7.39584L10.0001 12.6042L15.2084 7.39585" stroke="" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </a>
+
+                        <!-- Dropdown Menu Start -->
+                        <div class="overflow-hidden transform translate" :class="(selected === 'MonthlyTargets') ? 'block' : 'hidden'">
+                            <ul :class="sidebarToggle ? 'lg:hidden' : 'flex'" class="flex flex-col mt-2 menu-dropdown pl-9">
+                                <li>
+                                    <a wire:navigate href="{{ route('monthly-targets.create') }}" class="menu-dropdown-item group"
+                                        :class="page === 'monthly-targets.create' ? 'menu-dropdown-item-active' :
+                                                        'menu-dropdown-item-inactive'">
+                                        Add Monthly Target
+                                        <span class="absolute flex items-center gap-1 right-3">
+                                            <span class="menu-dropdown-badge" :class="page === 'monthly-targets.create' ? 'menu-dropdown-badge-active' :
+                                                            'menu-dropdown-badge-inactive'">
+                                            </span>
+                                        </span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a wire:navigate href="{{ route('monthly-targets.index') }}" class="menu-dropdown-item group"
+                                        :class="page === 'monthly-targets.index' ? 'menu-dropdown-item-active' :
+                                                        'menu-dropdown-item-inactive'">
+                                        Manage Monthly Targets
+                                        <span class="absolute flex items-center gap-1 right-3">
+                                            <span class="menu-dropdown-badge" :class="page === 'monthly-targets.index' ? 'menu-dropdown-badge-active' :
+                                                            'menu-dropdown-badge-inactive'">
+                                            </span>
+                                        </span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <!-- Dropdown Menu End -->
+                    </li>
+                    <!-- Menu Item Monthly Targets -->
                 </ul>
             </div>
