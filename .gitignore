@@ -6,6 +6,9 @@
 /storage/pail
 /vendor
 /config/custom.php
+/public/tailadmin/*
+!/public/tailadmin/build/
+
 
 .env
 .env.backup
