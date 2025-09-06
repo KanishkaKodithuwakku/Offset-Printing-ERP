@@ -22,7 +22,9 @@
         <!-- Sidebar Menu -->
         <nav x-data="{ selected: $persist('Dashboard') }">
 
+            @if (auth()->user()->mode === 'admin')
             @include('livewire.menu.dashboard.index')
+            @endif
            
             @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing'|| auth()->user()->mode === 'accounts')
             @include('livewire.menu.admin.index')
