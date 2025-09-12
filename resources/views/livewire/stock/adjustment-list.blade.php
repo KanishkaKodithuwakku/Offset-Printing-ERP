@@ -47,58 +47,58 @@
         @endif
 
         <div
-            class="w-full max-w-4xl rounded-2xl border p-6 border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] ">
-<div class="flex">
-            <div class="pr-5 mb-4">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    Adjustment Item list
-                </h3>
-            </div>
+            class="w-full max-w-4xl rounded-2xl border p-6 border-gray-200 bg-white dark:border-gray-300 dark:bg-gray-800 ">
+            <div class="flex">
+                <div class="pr-5 mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+                        Adjustment Item list
+                    </h3>
+                </div>
 
-            <div class="mb-4">
-                <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-400">Status</label>
+                <div class="mb-4">
+                    <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-400">Status</label>
                 <select wire:model.change="statusFilter"
-                    class="h-8 rounded-md border border-gray-300 pr-6 text-xs dark:bg-dark-900 dark:text-white/90">
-                    <option value="">All</option>
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                </select>
+                    class="h-8 rounded-md border border-gray-300 dark:border-gray-300 pr-6 text-xs dark:bg-gray-800 dark:text-white/90">
+                        <option value="">All</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
             </div>
-        </div>
 
             <!-- Flex container for left and right sections -->
             <div class="flex gap-6 w-full">
                 <!-- Left side: Adjustments Table -->
                 <div class=" flex flex-col" style="width: 60%">
-                    <table class="table mt-6 border border-gray-300 w-full">
+                    <table class="table mt-6 border border-gray-300 dark:border-gray-300 w-full">
                         <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border border-gray-200 text-gray-500 px-4 py-2 text-sm font-semibold text-left"
+                            <tr class="bg-gray-100 dark:bg-gray-900">
+                                <th class="border border-gray-200 dark:border-gray-300 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left"
                                     style="width: 10%">
                                     ID
                                 </th>
-                                <th class="border border-gray-200 text-gray-500 px-4 py-2 text-sm font-semibold text-left"
+                                <th class="border border-gray-200 dark:border-gray-300 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left"
                                     style="width: 40%">
                                     Reason
                                 </th>
-                                <th class="border border-gray-200 text-gray-500 px-4 py-2 text-sm font-semibold text-left"
+                                <th class="border border-gray-200 dark:border-gray-300 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left"
                                     style="width: 20%">
                                     Status
                                 </th>
-                                <th class="border border-gray-200 text-gray-500 px-4 py-2 text-sm font-semibold text-left"
+                                <th class="border border-gray-200 dark:border-gray-300 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left"
                                     style="width: 30%">
                                     Created At
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white dark:bg-gray-700">
                             @forelse ($adjustments as $adjustment)
                                 <tr wire:click="selectAdjustment({{ $adjustment->id }})"
-                                    class="cursor-pointer hover:bg-gray-100" tabindex="0" role="button"
+                                    class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" tabindex="0" role="button"
                                     aria-pressed="false">
-                                    <td class="border border-gray-200 text-sm px-4 py-2">{{ $adjustment->id }}</td>
-                                    <td class="border border-gray-200 text-sm px-4 py-2">{{ $adjustment->reason }}</td>
-                                    <td class="px-3 py-2 text-xs border-b font-semibold text-gray-700">
+                                    <td class="border border-gray-200 dark:border-gray-300 text-sm px-4 py-2 text-gray-700 dark:text-gray-300">{{ $adjustment->id }}</td>
+                                    <td class="border border-gray-200 dark:border-gray-300 text-sm px-4 py-2 text-gray-700 dark:text-gray-300">{{ $adjustment->reason }}</td>
+                                    <td class="px-3 py-2 text-xs border-b border-gray-200 dark:border-gray-300 font-semibold text-gray-700 dark:text-gray-300">
                                         @if ($adjustment->status === 'approved')
                                             <span
                                                 class="bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500 rounded-full px-2 py-0.5">Approved</span>
@@ -107,12 +107,12 @@
                                                 class="bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500 rounded-full px-2 py-0.5">Pending</span>
                                         @endif
                                     </td>
-                                    <td class="border border-gray-200 text-sm px-4 py-2">
+                                    <td class="border border-gray-200 dark:border-gray-300 text-sm px-4 py-2 text-gray-700 dark:text-gray-300">
                                         {{ $adjustment->created_at->format('d-m-Y H:i') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="border border-gray-300 px-4 py-2 text-center" colspan="5">No
+                                    <td class="border border-gray-300 dark:border-gray-300 px-4 py-2 text-center text-gray-500 dark:text-gray-400" colspan="5">No
                                         adjustments
                                         found.
                                     </td>
@@ -122,13 +122,14 @@
                     </table>
 
                     <!-- Pagination -->
-                    <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-800">
+                    <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-300">
                         <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Showing {{ $adjustments->firstItem() }} to {{ $adjustments->lastItem() }} of {{ $adjustments->total() }} entries
+                            Showing {{ $adjustments->firstItem() }} to {{ $adjustments->lastItem() }} of
+                            {{ $adjustments->total() }} entries
                         </div>
 
                         <div class="pagination flex justify-between">
-                          {{ $adjustments->links('vendor.pagination.custom-tailwind') }}
+                            {{ $adjustments->links('vendor.pagination.custom-tailwind') }}
                         </div>
                     </div>
                 </div>
@@ -136,7 +137,7 @@
                 <!-- Right side: Selected Adjustment Details -->
                 <div class="w-1/2">
                     @if ($selectedAdjustmentId)
-                        <div class=" overflow-auto pr-4   dark:bg-gray-800">
+                        <div class="mt-6">
                             @livewire('stock.adjustment-item-list', ['adjustmentId' => $selectedAdjustmentId], key($selectedAdjustmentId))
                         </div>
                     @endif
