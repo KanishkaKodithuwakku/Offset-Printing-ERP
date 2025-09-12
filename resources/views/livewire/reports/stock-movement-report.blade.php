@@ -117,7 +117,7 @@
             <div>
                 <label class="block text-xs text-gray-700 dark:text-gray-400 font-medium">Movement Type</label>
                 <select wire:model.change="movementType"
-                    class="mt-1 dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-600 dark:text-white/90 dark:placeholder:text-gray-400"
+                    class="mt-1 dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-gray-400"
                     style="width: 27%">
                     <option value=""> All Types </option>
                     <option value="adjustment">Adjustment</option>
