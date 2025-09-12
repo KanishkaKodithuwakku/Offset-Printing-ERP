@@ -21,7 +21,7 @@
                             <div class="max-w-full overflow-x-auto custom-scrollbar border">
                                 <table class="w-full">
                                     <thead>
-                                        <tr class="border-t border-gray-100 dark:border-gray-800">
+                                        <tr class="border-t border-gray-100 dark:border-gray-800 dark:bg-gray-900">
                                             <th class="px-3 py-3 text-left">
                                                 <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                                     Name
@@ -47,10 +47,10 @@
                                     <tbody>
                                         @foreach ($searchResultsSupplier as $supplier)
                                             <tr wire:click="assignSupplier({{ $supplier['id'] }})"
-                                                class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-200">
+                                                class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-600 ">
                                                 <td class="px-2 py-3.5">
                                                     <p
-                                                        class="font-medium text-gray-500 text-theme-sm dark:text-white/90">
+                                                        class="font-medium text-gray-500 text-theme-sm dark:text-gray-400 ">
                                                         {{ $supplier['name'] }}
                                                     </p>
                                                 </td>

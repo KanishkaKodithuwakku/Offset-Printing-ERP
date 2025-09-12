@@ -45,7 +45,7 @@
         @endif
 
         <div
-            class="w-full max-w-4xl rounded-2xl border p-6 border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] ">
+            class="w-full max-w-4xl rounded-2xl border p-6 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
 
         <!-- Search and Filter Section -->
         {{-- <input type="text" wire:model="search" placeholder="Search Adjustments"
@@ -59,37 +59,37 @@
             <option value="approved">Approved</option>
         </select> --}}
 
-        
+
 
             <!-- Adjustments Table -->
-            <table class="table mt-6  border-gray-300" style="width: 50%">
+            <table class="table mt-6 border border-gray-300 dark:border-gray-700" style="width: 50%">
                 <thead>
-                    <tr class="bg-gray-100">
-                        <th class=" border-gray-200 border text-gray-500 px-4 py-2 text-sm font-semibold text-left">ID
+                    <tr class="bg-gray-100 dark:bg-gray-900">
+                        <th class="border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left">ID
                         </th>
-                        <th class=" border-gray-200 border text-gray-500 px-4 py-2 text-sm font-semibold text-left">
+                        <th class="border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left">
                             Reason</th>
-                        <th class=" border-gray-200 border text-gray-500 px-4 py-2 text-sm font-semibold text-left">
+                        <th class="border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left">
                             Status</th>
-                        <th class=" border-gray-200 border text-gray-500 px-4 py-2 text-sm font-semibold text-left">
+                        <th class="border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left">
                             Created At</th>
-                        <th class=" border-gray-200 border text-gray-500 px-4 py-2 text-sm font-semibold text-left">
+                        <th class="border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 px-4 py-2 text-sm font-semibold text-left">
                             Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($adjustments as $adjustment)
                         <tr wire:click="selectAdjustment({{ $adjustment->id }})"
-                            class="cursor-pointer hover:bg-gray-100" tabindex="0" role="button" aria-pressed="false">
-                            <td class=" border-gray-200 border text-sm px-4 py-2">{{ $adjustment->id }}</td>
-                            <td class=" border-gray-200 border text-sm px-4 py-2">{{ $adjustment->reason }}</td>
-                            <td class=" border-gray-200 border text-sm px-4 py-2">{{ $adjustment->status }}</td>
-                            <td class=" border-gray-200 border text-sm px-4 py-2">
+                            class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800" tabindex="0" role="button" aria-pressed="false">
+                            <td class="border border-gray-200 dark:border-gray-600 text-sm px-4 py-2 text-gray-900 dark:text-gray-200">{{ $adjustment->id }}</td>
+                            <td class="border border-gray-200 dark:border-gray-600 text-sm px-4 py-2 text-gray-900 dark:text-gray-200">{{ $adjustment->reason }}</td>
+                            <td class="border border-gray-200 dark:border-gray-600 text-sm px-4 py-2 text-gray-900 dark:text-gray-200">{{ $adjustment->status }}</td>
+                            <td class="border border-gray-200 dark:border-gray-600 text-sm px-4 py-2 text-gray-900 dark:text-gray-200">
                                 {{ $adjustment->created_at->format('d-m-Y H:i') }}</td>
-                            <td class=" border-gray-200 border text-sm px-4 py-2 text-left">
+                            <td class="border border-gray-200 dark:border-gray-600 text-sm px-4 py-2 text-left">
                                 <button type="button" class="btn btn-primary "
                                     wire:click.stop="selectAdjustment({{ $adjustment->id }})">
-                                    <svg class="fill-current text-gray-500 hover:text-gray-700" width="18"
+                                    <svg class="fill-current text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" width="18"
                                         height="18" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path fill-rule="evenodd" clip-rule="evenodd"
@@ -101,7 +101,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="border border-gray-300 px-4 py-2 text-center" colspan="5">No adjustments
+                            <td class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center text-gray-900 dark:text-gray-200" colspan="5">No adjustments
                                 found.
                             </td>
                         </tr>

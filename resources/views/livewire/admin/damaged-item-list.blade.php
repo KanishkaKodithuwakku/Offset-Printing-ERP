@@ -1,4 +1,4 @@
-<div class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-300 dark:bg-gray-800">
 
     <div class="p-4">
         @if (session('success'))
@@ -49,13 +49,14 @@
             <div class="pr-5">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
                     Damage Item list
+                </h3>
             </div>
             <div>
                 {{-- Status Dropdown --}}
                 <div>
                     <label class="mb-1  block text-xs font-medium text-gray-700 dark:text-gray-400">Status</label>
                     <select wire:model.change="statusFilter"
-                        class="h-8 rounded-md border border-gray-300 pr-6 text-xs dark:bg-dark-900 dark:text-white/90">
+                        class="h-8 rounded-md border border-gray-300 dark:border-gray-300 pr-6 text-xs dark:bg-gray-800 dark:text-white/90">
                         <option value="">All</option>
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
@@ -68,26 +69,26 @@
 
         </h3>
 
-        <table class="min-w-full table-auto mt-4  border-gray-200 text-sm">
-            <thead class="bg-gray-100">
+        <table class="min-w-full table-auto mt-4 border border-gray-300 dark:border-gray-300 text-sm">
+            <thead class="bg-gray-100 dark:bg-gray-900">
                 <tr>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Job #</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Customer</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Item</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Qty</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Reason</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Status</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Job #</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Customer</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Item</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Qty</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Reason</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left border-b border-gray-300 dark:border-gray-300">Status</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-white dark:bg-gray-700">
                 @foreach ($items as $item)
-                    <tr>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->job_number }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->customer->name }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->item->item_name }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->quantity }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->reason }}</td>
-                        <td class="px-3 py-2 text-xs border-b font-semibold text-gray-700">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->job_number }}</td>
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->customer->name }}</td>
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->item->item_name }}</td>
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->quantity }}</td>
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->reason }}</td>
+                        <td class="px-3 py-2 text-xs border-b border-gray-300 dark:border-gray-300 font-semibold text-gray-700 dark:text-gray-300">
                             @if ($item->status === 'approved')
                                 <span
                                     class="bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500 rounded-full px-2 py-0.5">Approved</span>
@@ -107,7 +108,7 @@
         </table>
     </div>
     <!-- Pagination -->
-    <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-800">
+    <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-300">
         <div class="text-sm text-gray-600 dark:text-gray-400">
             Showing {{ $items->firstItem() }} to {{ $items->lastItem() }} of {{ $items->total() }}
             entries

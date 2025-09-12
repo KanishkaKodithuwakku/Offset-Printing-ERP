@@ -1,10 +1,10 @@
-<div class="p-4 bg-white shadow rounded">
+<div">
     <!-- Hidden File Input -->
     <input type="file" id="csvUpload" wire:model="file" class="hidden" accept=".csv">
 
     <!-- Import Button -->
     <button style="background-color:#465FFF;padding 8px 15px;" onclick="document.getElementById('csvUpload').click()"
-        class="flex items-center space-x-2 bg-[#465FFF] hover:bg-[#3b4ddb] text-white font-medium px-6 py-2 rounded-md text-sm shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+        class="flex dark:bg-gray-800 items-center space-x-2 bg-[#465FFF] hover:bg-[#3b4ddb] text-white font-medium px-6 py-2 rounded-md text-sm shadow-md transition duration-300 ease-in-out transform hover:scale-105">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 34 34" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>

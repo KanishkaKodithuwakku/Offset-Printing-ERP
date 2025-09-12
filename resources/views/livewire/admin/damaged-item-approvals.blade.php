@@ -46,41 +46,41 @@
             </div>
         @endif
 
-         <h3 class="text-lg mt-2 font-semibold text-gray-800 dark:text-white/90">
+         <h3 class="text-lg  font-semibold text-gray-800 dark:text-white/90">
         Damage Item Approvals
     </h3>
 
-        <table class="min-w-full table-auto mt-4  border-gray-200 text-sm">
-            <thead class="bg-gray-100">
+        <table class="min-w-full table-auto mt-4 border border-gray-200 text-sm dark:border-gray-700">
+            <thead class="bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Job #</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Customer</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Item</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Qty</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Reason</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Status</th>
-                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 text-left">Actions</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Job #</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Customer</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Item</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Qty</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Reason</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Status</th>
+                    <th class="px-3 py-2 text-sm font-semibold text-gray-500 dark:text-gray-300 text-left">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($items as $item)
                     <tr
-                        class="{{ $item->status === 'approved' ? 'bg-green-50' : ($item->status === 'rejected' ? 'bg-red-50' : '') }}">
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->job_number }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->customer->name }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->item->item_name }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->quantity }}</td>
-                        <td class="px-3 py-2 text-xs border-b">{{ $item->reason }}</td>
-                        <td class="px-3 py-2 text-xs border-b font-semibold text-gray-700">{{ ucfirst($item->status) }}
+                        class=" {{ $item->status === 'approved' ? 'bg-green-50 dark:bg-green-900/20' : ($item->status === 'rejected' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50') }}">
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">{{ $item->job_number }}</td>
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">{{ $item->customer->name }}</td>
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">{{ $item->item->item_name }}</td>
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">{{ $item->quantity }}</td>
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">{{ $item->reason }}</td>
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200">{{ ucfirst($item->status) }}
                         </td>
-                        <td class="px-3 py-2 text-xs border-b">
+                        <td class="px-3 py-2 text-xs border-b dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                             @if ($item->status === 'pending')
                                 <button wire:click="approve({{ $item->id }})"
-                                    class="px-2 py-1 bg-success-500 text-white text-xs rounded">Approve</button>
+                                    class="px-2 py-1 bg-success-500 hover:bg-success-600 text-white text-xs rounded transition-colors">Approve</button>
                                 <button wire:click="reject({{ $item->id }})"
-                                    class="px-2 py-1 bg-error-500 text-white text-xs rounded">Reject</button>
+                                    class="px-2 py-1 bg-error-500 hover:bg-error-600 text-white text-xs rounded transition-colors">Reject</button>
                             @else
-                                <span class="text-xs text-gray-500">No action</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">No action</span>
                             @endif
                         </td>
                     </tr>

@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-screen-xl p-4 grid grid-cols-1 sm:grid-cols-1 gap-4">
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="bg-white dark:bg-white/[0.03] p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
 
-        <div class="p-5 mb-6 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
+        <div class="p-5 mb-6 border border-gray-200 dark:border-gray-600 rounded-2xl dark:bg-gray-800 lg:p-6">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h4 class="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
@@ -79,10 +79,10 @@
                     class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
             @endif
             @if (!empty($searchResults))
-                <div class="max-w-full overflow-x-auto custom-scrollbar border mt-2">
+                <div class="max-w-full overflow-x-auto custom-scrollbar border border-gray-300 dark:border-gray-600 mt-2">
                     <table class="w-full">
-                        <thead>
-                            <tr class="border-t border-gray-100 dark:border-gray-800">
+                        <thead class="dark:bg-gray-900">
+                            <tr class="border-t border-gray-100 dark:border-gray-600">
                                 <th class="px-3 py-1 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                         Name
@@ -110,22 +110,22 @@
                                 </th> --}}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="dark:bg-gray-700">
                             @foreach ($searchResults as $item)
                                 <tr wire:click="addItem({{ $item['id'] }})"
-                                    class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-200 mb-5">
+                                    class="border-t border-gray-100 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 mb-5">
 
                                     <td class="px-2 py-1 text-left">
-                                        <p class="font-medium text-gray-500 text-theme-sm dark:text-white/90">
+                                        <p class="font-medium text-gray-500 text-theme-sm dark:text-gray-300">
                                             {{ $item['item_name'] }}
                                         </p>
                                     </td>
                                     <td class="px-3 py-1  text-left">
-                                        <p class="text-gray-500 text-theme-sm dark:text-gray-400">
+                                        <p class="text-gray-500 text-theme-sm dark:text-gray-300">
                                             {{ $item['item_code'] }}</p>
                                     </td>
                                     <td class="px-3 py-1">
-                                        <p class="text-gray-500 text-theme-sm dark:text-gray-400">
+                                        <p class="text-gray-500 text-theme-sm dark:text-gray-300">
                                             {{ $item['purchase_price'] }}</p>
                                     </td>
                                     {{-- <td class="px-3 py-1">
@@ -208,9 +208,9 @@
         <!-- GRN Items Table -->
         <div class="custom-scrollbar max-w-full overflow-x-auto mt-5">
 
-            <table class="min-w-full">
-                <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
-                    <tr class="bg-gray-200">
+            <table class="min-w-full border border-gray-300 dark:border-gray-600">
+                <thead class="border-y border-gray-100 py-2  dark:border-gray-600 dark:bg-gray-900 bg-gray-200">
+                    <tr>
                         <th class="py-2 font-normal whitespace-nowrap px-2">
                             <div class="flex items-center">
                                 <p class="text-theme-xs text-gray-500 dark:text-gray-400">Item</p>
@@ -252,61 +252,61 @@
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-600 dark:bg-gray-700">
                     @foreach ($grnItems as $index => $grnItem)
                         <tr class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300 px-2">
                                         {{ $grnItem['item_name'] }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ $grnItem['sku_code'] }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ number_format($grnItem['selling_price'], 2) }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ number_format($grnItem['purchase_price'], 2) }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                         <input type="number" wire:model="grnItems.{{ $index }}.quantity"
                                             wire:change="updateTotal({{ $index }})" min="1"
-                                            class="w-16 border p-1 text-center">
+                                            class="w-16 border p-1 text-center text-sm dark:bg-gray-600 dark:border-gray-700 dark:text-gray-700">
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ number_format($grnItem['total'], 2) }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap text-center">
-                                <div class="flex items-center justify-center">
+                                <div class="flex items-center justify-start">
                                     <p
                                         class="text-theme-xs text-gray-300 dark:text-gray-400 text-center hover:text-gray-500">
                                         @if ($status != 'completed')
                                             <button wire:click="removeItem({{ $index }})"
-                                                class="text-red-500">
-                                                <svg class="w-4 h-4 text-gray-800 dark:text-white hover:text-gray-400"
+                                                class="text-error-500">
+                                                <svg class="w-4 h-4 text-error-500 dark:text-error-500 "
                                                     aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                                     width="18" height="18" fill="none"
                                                     viewBox="0 0 24 24">
@@ -336,7 +336,7 @@
             </table>
         </div>
 
-        <div class="pb-6 my-6 text-right border-b border-gray-100 dark:border-gray-800">
+        <div class="pb-6 my-6 text-right border-b border-gray-100 dark:border-gray-600">
             {{-- <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
                 Sub Total amount: {{ number_format($total_amount, 2) }}
             </p> --}}
