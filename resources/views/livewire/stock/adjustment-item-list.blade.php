@@ -2,7 +2,7 @@
 
 
     @if ($adjustment)
-        <div class="p-4 bg-white shadow rounded-lg">
+        <div >
 
 
 
@@ -53,31 +53,31 @@
                 </div>
             @endif
 
-            <table class="min-w-full mt-2 table-auto border-collapse">
-                <thead>
+            <table class="min-w-full mt-2 table-auto border-collapse border border-gray-300 dark:border-gray-300">
+                <thead class="bg-gray-100 dark:bg-gray-800">
                     <tr>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Item Name</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Item Code</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Pre Qty</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Adjustment Qty</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Remark</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-300 dark:border-gray-300 text-left">Item Name</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-300 dark:border-gray-300 text-left">Item Code</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-300 dark:border-gray-300 text-left">Pre Qty</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-300 dark:border-gray-300 text-left">Adjustment Qty</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-300 dark:border-gray-300 text-left">Remark</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white dark:bg-gray-700">
                     @foreach ($adjustment->adjustmentItems as $item)
-                        <tr>
-                            <td class="px-4 py-2 text-xs border">{{ $item->item->item_name }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->item->item_code }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->pre_qty }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->quantity }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->remark }}</td>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td class="px-4 py-2 text-xs border border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->item->item_name }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->item->item_code }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->pre_qty }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->quantity }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-300 dark:border-gray-300 text-gray-700 dark:text-gray-300">{{ $item->remark }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
     @else
-        <p class="text-gray-500">No items to display. Please click on a valid adjustment row.</p>
+        <p class="text-gray-500 dark:text-gray-400">No items to display. Please click on a valid adjustment row.</p>
     @endif
 
 
