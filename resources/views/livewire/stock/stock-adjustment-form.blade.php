@@ -2,9 +2,9 @@
     <!-- Adjustment Form -->
 
     <div
-        class="w-full p-6 max-w-4xl rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] ">
+        class="w-full p-6 max-w-4xl rounded-2xl border border-gray-200 bg-white dark:border-gray-300 dark:bg-gray-800 ">
 
-        <h3 class="text-lg mb-4 font-semibold text-gray-700">Stock Adjustment</h3>
+        <h3 class="text-lg mb-4 font-semibold text-gray-700 dark:text-white/90">Stock Adjustment</h3>
 
         <!-- Display a success message -->
         @if (session('success'))
@@ -54,61 +54,66 @@
 
         <!-- Item Search -->
         <div class=" mt-4 mb-4">
-            <label class="block text-sm font-medium text-gray-600">Search Item<span
+            <label class="block text-sm font-medium text-gray-600 dark:text-gray-400">Search Item<span
                     class="text-error-500">*</span></label>
             <input type="text" wire:model.live.throttle.150ms="searchTerm" placeholder="Search items..."
-                class="dark:bg-dark-900 mt-2  shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                class="dark:bg-dark-900 mt-2  shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-300"
                 style="width: 25%" />
 
             <!-- Search Results -->
             @if (!empty($searchResults))
-                <div class="max-w-full overflow-x-auto custom-scrollbar border">
+                <div class="max-w-full overflow-x-auto custom-scrollbar border border-gray-300 dark:border-gray-300">
                     <table class="w-full">
-                        <thead>
-                            <tr class="border-t border-gray-100 dark:border-gray-800">
-                                <th class="px-3 py-3 text-left">
+                        <thead class="bg-gray-100 dark:bg-gray-900">
+                            <tr class="border-t border-gray-100 dark:border-gray-300">
+                                <th class="px-3 py-1 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                         Item
                                     </p>
                                 </th>
-                                <th class="px-6 py-3 text-left">
+                                <th class="px-6 py-1 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                         Code
                                     </p>
                                 </th>
-                                <th class="px-6 py-3 text-left">
+                                <th class="px-6 py-1 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                         Stock
+                                    </p>
+                                </th>
+                                <th class="px-6 py-1 text-left">
+                                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                                        Action
                                     </p>
                                 </th>
 
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white dark:bg-gray-700">
                             @foreach ($searchResults as $item)
                                 <tr
                                     @if ($item['stock_balance'] > 0) wire:click="addAdjustmentItem({{ $item['id'] }})"
-                                    class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-error-200"
+                                    class="border-t border-gray-100 dark:border-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
                                     @else wire:click="addAdjustmentItem({{ $item['id'] }})"
-                                    class="border-t border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed hover:bg-error-50 bg-error-50" @endif>
-                                    <td class="px-2 py-3">
+                                    class="border-t border-gray-100 dark:border-gray-300 opacity-50 cursor-not-allowed hover:bg-red-50 dark:hover:bg-red-900/20 bg-red-50 dark:bg-red-900/10" @endif>
+                                    <td class="px-2 py-1">
                                         <p class="font-medium text-gray-500 text-theme-xs dark:text-white/90">
                                             {{ $item['item_name'] }}
                                         </p>
                                     </td>
-                                    <td class="px-6 py-3">
+                                    <td class="px-6 py-1">
                                         <p class="text-gray-500 text-theme-xs dark:text-gray-400">
                                             {{ $item['item_code'] }}</p>
                                     </td>
-                                    <td class="px-6 py-3">
+                                    <td class="px-6 py-1">
                                         <p class="text-gray-500 text-theme-xs dark:text-gray-400">
                                             {{ $item['stock_balance'] }}
                                         </p>
                                     </td>
-                                    <td class="px-6 py-3">
+                                    <td class="px-6 py-1">
                                         <!-- Add Button -->
                                         <button wire:click.prevent="addAdjustmentItem({{ $item['id'] }})"
-                                            class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs">
+                                            class="bg-brand-500 dark:hover:text-gray-900 dark:text-gray-300 text-white px-2 py-1 rounded text-xs">
                                             Add
                                         </button>
                                     </td>
@@ -122,35 +127,35 @@
 
         <!-- Adjustment Items Grid -->
         <div class="mt-6">
-            <h3 class="block text-sm font-medium text-gray-600">Adjustment Items</h3>
-            <table class="w-full mt-2 table-auto border">
-                <thead class="bg-gray-100  dark:bg-gray-800 border">
+            <h3 class="block text-sm font-medium text-gray-600 dark:text-gray-400">Adjustment Items</h3>
+            <table class="w-full mt-2 table-auto border border-gray-300 dark:border-gray-300">
+                <thead class="bg-gray-100 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-300">
                     <tr>
-                        <th class="px-4 py-2 text-sm text-left">Name</th>
-                        <th class="px-4 py-2 text-sm text-left">Code</th>
-                        <th class="px-4 py-2 text-sm text-left">Remark</th>
-                        <th class="px-4 py-2 text-sm text-left">Qty</th>
-                        <th class="px-4 py-2 text-sm text-left">Action</th> <!-- New column for Remove -->
+                        <th class="px-4 py-1 text-sm text-left text-gray-700 dark:text-gray-300">Name</th>
+                        <th class="px-4 py-1 text-sm text-left text-gray-700 dark:text-gray-300">Code</th>
+                        <th class="px-4 py-1 text-sm text-left text-gray-700 dark:text-gray-300">Remark</th>
+                        <th class="px-4 py-1 text-sm text-left text-gray-700 dark:text-gray-300">Qty</th>
+                        <th class="px-4 py-1 text-sm text-left text-gray-700 dark:text-gray-300">Action</th> <!-- New column for Remove -->
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white dark:bg-gray-700">
                     @foreach ($adjustmentItems as $index => $item)
-                        <tr>
-                            <td class="px-4 text-xs py-2">{{ $item['item_name'] }}</td>
-                            <td class="px-4 text-xs py-2">{{ $item['item_code'] }}</td>
-                            <td class="px-4 text-xs py-2">
+                        <tr class="border-b border-gray-200 dark:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td class="px-4 text-xs py-1 text-gray-700 dark:text-gray-300">{{ $item['item_name'] }}</td>
+                            <td class="px-4 text-xs py-1 text-gray-700 dark:text-gray-300">{{ $item['item_code'] }}</td>
+                            <td class="px-4 text-xs py-1">
                                 <input type="text" wire:model="adjustmentItems.{{ $index }}.remark"
-                                    class="w-full p-1 border text-xs rounded-md">
+                                    class="w-full p-1 border border-gray-300 dark:border-gray-300 text-xs rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                             </td>
-                            <td class="px-4 py-2">
+                            <td class="px-4 py-1">
                                 <input type="number" wire:model="adjustmentItems.{{ $index }}.quantity"
-                                    class="w-24 p-1 text-xs border rounded-md" min="1">
+                                    class="w-24 p-1 text-xs border border-gray-300 dark:border-gray-300 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" min="1">
                             </td>
                             <td>
                                 <!-- Remove Button -->
                                 <button wire:click="removeAdjustmentItem({{ $item['item_id'] }})"
-                                    class="btn btn-danger bg-gray-600 hover:bg-gray-700 text-gray-500 px-4  py-1 rounded text-xs">
-                                    <svg class="w-4 h-4 text-gray-800 dark:text-white hover:text-gray-400"
+                                    class="btn btn-danger  px-4 py-1 rounded text-xs">
+                                    <svg class="w-4 h-4 text-error-500 dark:text-error-500"
                                         aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18"
                                         height="18" fill="none" viewBox="0 0 24 24">
                                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
@@ -165,8 +170,8 @@
         </div>
 
         <div class="mt-6">
-            <label for="reason" class="block text-sm font-medium text-gray-600">Reason</label>
-            <textarea id="reason" wire:model="reason" class="w-full p-2 mt-1 border text-xs rounded-md"></textarea>
+            <label for="reason" class="block text-sm font-medium text-gray-600 dark:text-gray-400">Reason</label>
+            <textarea id="reason" wire:model="reason" class="w-full p-2 mt-1 border border-gray-300 dark:border-gray-300 text-xs rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"></textarea>
         </div>
 
         <!-- Save Button -->
