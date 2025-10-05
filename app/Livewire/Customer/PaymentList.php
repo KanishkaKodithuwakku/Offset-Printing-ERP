@@ -12,6 +12,7 @@ use App\Models\Ledger;
 use App\Models\Payment;
 use App\Models\PaymentDetail;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -114,7 +115,7 @@ class PaymentList extends Component
                 $inv = Invoice::findOrFail($detail->invoice_id);
                 $inv->amount_due     = $inv->amount_due + $detail->amount;
                 $inv->payment_status = $inv->amount_due === 0 ? 'paid' : 'partial';
-                $inv->status         = $inv->amount_due === 0 ? 'invoiced' : 'invoicing';
+                $inv->status         = 'invoiced';
                 $inv->save();
 
                 // b) If this was a credit‐memo application, rollback the CustomerCredit
@@ -168,19 +169,28 @@ class PaymentList extends Component
                         DB::table('credit_applications')->where('id', $app->id)->delete();
                     }
                 }
-
-                $inv->update(['amount_due' => $inv->total_amount, 'payment_status' => 'unpaid']);
-                $inv->save();
+                
+                if($detail->amount === $inv->total_amount){
+                    $inv->update(['amount_due' => $inv->total_amount, 'payment_status' => 'unpaid']);
+                    $inv->save();  
+                }
             }
 
 
 
             // 4) Soft-cancel the payment and its details
-            $payment->update(['status' => 'cancelled', 'deleted_by' => $this->authUser->id,'cancel_reason'=> $this->cancelReason]);
+            $payment->update([
+                'status' => 'cancelled', 
+                'deleted_by' => $this->authUser->id,
+                'cancel_reason' => $this->cancelReason
+            ]);
+            
+            // Soft delete the payment (this will set deleted_at automatically)
+            $payment->delete();
+            
             foreach ($payment->paymentDetails as $detail) {
                 $detail->update(['status' => 'cancelled']); // Only update status, do not delete
             }
-            // $payment->delete(); // Do not delete the payment
 
             DB::commit();
             session()->flash('message', 'Payment reversed successfully.');
