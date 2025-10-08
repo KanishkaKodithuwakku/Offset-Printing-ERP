@@ -24,7 +24,8 @@ class Payment extends Model
         'status',
         'deleted_by',
         'cancel_reason',
-        'memo'
+        'memo',
+        'deleted_at'
     ];
 
     public function customer()
