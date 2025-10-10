@@ -714,6 +714,27 @@ class JobOrderView extends Component
 
             $customer = $jobOrder->customer;
 
+            // Calculate customer's current outstanding balance
+            $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                ->where('status', '!=', 'cancelled')
+                ->where('amount_due', '>', 0)
+                ->sum('amount_due');
+
+            // Calculate total amount including this new invoice
+            $totalAmountWithNewInvoice = $currentOutstanding + $jobOrder->total_amount;
+
+            // Check Credit Limit 2 (Hard limit - prevent invoice creation)
+            if ($customer->credit_limit_2_amount && $totalAmountWithNewInvoice > $customer->credit_limit_2_amount) {
+                session()->flash('error', "Credit limit exceeded! Credit limit 2: " . number_format($customer->credit_limit_2_amount, 2));
+                DB::rollBack();
+                return;
+            }
+
+            // Check Credit Limit 1 (Soft limit - show warning but allow creation)
+            if ($customer->credit_limit_1_amount && $totalAmountWithNewInvoice > $customer->credit_limit_1_amount) {
+                session()->flash('warning', "Credit limit exceeded! Credit limit 1: " . number_format($customer->credit_limit_1_amount, 2) . ". Invoice will be created with warning.");
+            }
+
             // Generate invoice number (You can modify this logic as needed)
             $invoiceNumber = NumberGenerator::generateInvoiceNumber('invoices', 'INV', env('BRANCH_CODE', 'default'), 5);
 
@@ -752,7 +773,14 @@ class JobOrderView extends Component
             $jobOrder->save();
             DB::commit();
 
-            session()->flash('success', 'Invoice and accounting entries created successfully!');
+            $successMessage = 'Invoice and accounting entries created successfully!';
+
+            // Add warning info to success message if credit limit 1 was exceeded
+            if ($customer->credit_limit_1_amount && $totalAmountWithNewInvoice > $customer->credit_limit_1_amount) {
+                $successMessage .= ' Warning: Credit limit 1 exceeded (' . number_format($customer->credit_limit_1_amount, 2) . ').';
+            }
+
+            session()->flash('success', $successMessage);
             return $this->redirect('/invoices');
         } catch (\Exception $e) {
             DB::rollBack();
