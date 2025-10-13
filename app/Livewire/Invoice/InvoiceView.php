@@ -126,6 +126,31 @@ class InvoiceView extends Component
 
             if ($invoice->status === 'invoicing') {
 
+                // Credit Limit Validation
+                $customer = $invoice->customer;
+
+                // Calculate customer's current outstanding balance (excluding this invoice)
+                $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->where('amount_due', '>', 0)
+                    ->where('id', '!=', $invoice->id) // Exclude current invoice
+                    ->sum('amount_due');
+
+                // Calculate total amount including this invoice
+                $totalAmountWithThisInvoice = $currentOutstanding + $invoice->total_amount;
+
+                // Check Credit Limit 2 (Hard limit - prevent invoice generation)
+                if ($customer->credit_limit_2_amount && $totalAmountWithThisInvoice > $customer->credit_limit_2_amount) {
+                    session()->flash('warning', "Credit limit 2 has been exceeded Rs. " . number_format($customer->credit_limit_2_amount, 2) . "");
+                    DB::rollBack();
+                    return;
+                }
+
+                // Check Credit Limit 1 (Soft limit - show warning but allow generation)
+                if ($customer->credit_limit_1_amount && $totalAmountWithThisInvoice > $customer->credit_limit_1_amount) {
+                    session()->flash('warning', "Credit limit 1 exceeded {" . number_format($customer->credit_limit_1_amount, 2) . "}");
+                }
+
                 $entryTypeId = EntryType::where('label', 'invoice')->value('id') ?? 4; // Fallback to 'journal'
 
                 $entry = Entry::create([
@@ -190,6 +215,7 @@ class InvoiceView extends Component
                 }
 
                 DB::commit();
+
                 session()->flash('success', 'Invoice and accounting entries created successfully!');
                 return $this->redirect('/invoices');
             } else {
