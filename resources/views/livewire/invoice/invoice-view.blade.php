@@ -232,6 +232,23 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                         </svg>
                         Invoice Items
                     </button>
+
+                    @if ($status === 'invoicing')
+                    <button
+                        class="inline-flex items-center gap-2 border-b-2 px-2.5 py-2 text-sm font-medium transition-colors duration-200 ease-in-out"
+                        x-bind:class="activeTab === 'otherExpenses' ?
+                            ' text-brand-500 border-brand-500  dark:text-brand-400 dark:border-brand-400' :
+                            'bg-transparent text-gray-500 border-transparent  hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                        x-on:click="activeTab = 'otherExpenses'">
+                        <svg class="size-5" width="20" height="20" viewBox="0 0 20 20" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2ZM10 16C6.68629 16 4 13.3137 4 10C4 6.68629 6.68629 4 10 4C13.3137 4 16 6.68629 16 10C16 13.3137 13.3137 16 10 16ZM10 6C7.79086 6 6 7.79086 6 10C6 12.2091 7.79086 14 10 14C12.2091 14 14 12.2091 14 10C14 7.79086 12.2091 6 10 6ZM10 8C8.89543 8 8 8.89543 8 10C8 11.1046 8.89543 12 10 12C11.1046 12 12 11.1046 12 10C12 8.89543 11.1046 8 10 8Z"
+                                fill="currentColor" />
+                        </svg>
+                        Other Expenses
+                    </button>
+                    @endif
                 </nav>
             </div>
 
@@ -265,13 +282,20 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                             Total (Rs)
                                         </p>
                                     </th>
-
+                                    @if ($status === 'invoicing')
+                                    <th class="px-6 py-3 text-left">
+                                        <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                                            Actions
+                                        </p>
+                                    </th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($invoiceItems as $index => $invoiceItem)
                                 <tr
-                                    class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-200">
+                                    class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-200"
+                                    wire:key="item-{{ $invoiceItem['expense_id'] ?? $invoiceItem['item_id'] ?? $index }}">
                                     <td class="px-2 py-3">
                                         <p class="font-medium text-gray-500 text-theme-sm dark:text-white/90">
                                             {{ $invoiceItem['name'] }}
@@ -291,7 +315,16 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                     </td>
                                     <td class="px-6 py-3">
                                         <p class="text-gray-500 text-theme-sm dark:text-gray-400">
+                                            @if ($status === 'invoicing' && isset($invoiceItem['is_other_expense']) && $invoiceItem['is_other_expense'])
+                                            <input type="number"
+                                                   wire:change="updateOtherExpenseQuantityById({{ $invoiceItem['expense_id'] }}, $event.target.value)"
+                                                   min="1"
+                                                   class="w-16 border p-1 text-right text-xs rounded"
+                                                   value="{{ $invoiceItem['quantity'] }}"
+                                                   wire:key="quantity-{{ $invoiceItem['expense_id'] }}">
+                                            @else
                                             {{ $invoiceItem['quantity'] }}
+                                            @endif
                                         </p>
                                     </td>
                                     <td class="px-6 py-3">
@@ -299,6 +332,21 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                             {{ number_format($invoiceItem['total_price'], 2) }}
                                         </p>
                                     </td>
+                                    @if ($status === 'invoicing')
+                                    <td class="px-6 py-3">
+                                        @if(isset($invoiceItem['is_other_expense']) && $invoiceItem['is_other_expense'])
+                                        <button wire:click="removeOtherExpenseById({{ $invoiceItem['expense_id'] }})"
+                                                class="text-red-500 hover:text-red-700 text-sm"
+                                                title="Remove Expense">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </button>
+                                        @else
+                                        <span class="text-gray-400 text-sm">-</span>
+                                        @endif
+                                    </td>
+                                    @endif
                                 </tr>
                                 @endforeach
 
@@ -334,6 +382,11 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                             {{ number_format($backedTotal, 2) }}
                                         </p>
                                     </td>
+                                    @if ($status === 'invoicing')
+                                    <td class="px-6 py-3">
+                                        <span class="text-gray-400 text-sm">-</span>
+                                    </td>
+                                    @endif
                                 </tr>
 
                                 @endif
@@ -398,6 +451,78 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
 
                     </div>
                 </div>
+
+                @if ($status === 'invoicing')
+                <div x-show="activeTab === 'otherExpenses'">
+                    <div class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-gray-800 dark:text-white/90 mb-4">
+                                Add Other Expenses
+                            </h3>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Select Expenses
+                                    </label>
+                                    <div class="relative" x-data="{ open: false, selectedCount: 0 }" x-init="selectedCount = $wire.selectedOtherExpenses.length">
+                                        <!-- Dropdown Button -->
+                                        <button type="button"
+                                                @click="open = !open"
+                                                class="flex items-center justify-between px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500" style="width: 300px;">
+                                            <span class="text-sm " x-text="selectedCount > 0 ? selectedCount + ' expenses selected' : 'Select expenses...'"></span>
+                                            <svg class="w-5 h-5 transition-transform duration-200"
+                                                 :class="{ 'rotate-180': open }"
+                                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+
+                                        <!-- Dropdown Content -->
+                                        <div x-show="open"
+                                             @click.away="open = false"
+                                             x-transition:enter="transition ease-out duration-100"
+                                             x-transition:enter-start="transform opacity-0 scale-95"
+                                             x-transition:enter-end="transform opacity-100 scale-100"
+                                             x-transition:leave="transition ease-in duration-75"
+                                             x-transition:leave-start="transform opacity-100 scale-100"
+                                             x-transition:leave-end="transform opacity-0 scale-95"
+                                             class="absolute z-10 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                                             style="width: 300px;">
+                                            @forelse($availableOtherExpenses as $expense)
+                                            <label class="flex items-center space-x-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                                <input type="checkbox"
+                                                       wire:model="selectedOtherExpenses"
+                                                       value="{{ $expense['id'] }}"
+                                                       @change="selectedCount = $wire.selectedOtherExpenses.length"
+                                                       class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="text-xs font-medium text-gray-900 dark:text-white">
+                                                        {{ $expense['expense_name'] }}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                            @empty
+                                            <div class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                                No other expenses available.
+                                            </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button wire:click="addSelectedExpenses"
+                                            class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium">
+                                        Add Selected Expenses
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
