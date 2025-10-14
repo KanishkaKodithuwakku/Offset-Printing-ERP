@@ -127,8 +127,6 @@
                 <td>
                     @if($item->item)
                         {{$item->item->item_name}}
-                    @elseif($item->expense)
-                        {{$item->expense->expense_name}}
                     @else
                         Unknown Item
                     @endif
@@ -136,6 +134,22 @@
                 <td>{{$item->quantity}}</td>
                 <td>{{$item->unit_price}}</td>
                 <td>{{$item->total_price}}</td>
+            </tr>
+            @endforeach
+
+            @foreach ($invoice->expensesItems as $expenseItem)
+            <tr>
+                <td>#</td>
+                <td>
+                    @if($expenseItem->expense)
+                        {{$expenseItem->expense->expense_name}}
+                    @else
+                        Unknown Expense
+                    @endif
+                </td>
+                <td>{{$expenseItem->quantity}}</td>
+                <td>{{$expenseItem->expense_price}}</td>
+                <td>{{$expenseItem->total_price}}</td>
             </tr>
             @endforeach
 

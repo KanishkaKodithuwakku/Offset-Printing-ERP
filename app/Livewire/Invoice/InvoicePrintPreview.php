@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Invoice;
 
+use App\Models\ExpensesItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\JobOrder;
@@ -24,7 +25,38 @@ class InvoicePrintPreview extends Component
     {
         $this->invoice = Invoice::find($invoiceId);
         $this->printedCount = $this->invoice->print_count;
-        $this->invoiceItems = InvoiceItem::with(['item', 'expense'])->where('invoice_id', $invoiceId)->get();
+
+        // Load regular invoice items
+        $regularItems = InvoiceItem::with('item')->where('invoice_id', $invoiceId)->get();
+
+        // Load expenses items
+        $expensesItems = ExpensesItem::with('expense')->where('invoice_id', $invoiceId)->get();
+
+        // Combine both types of items
+        $this->invoiceItems = collect();
+
+        // Add regular items
+        foreach ($regularItems as $item) {
+            $this->invoiceItems->push((object)[
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'total_price' => $item->total_price,
+                'item' => $item->item,
+                'expense' => null
+            ]);
+        }
+
+        // Add expenses items
+        foreach ($expensesItems as $expenseItem) {
+            $this->invoiceItems->push((object)[
+                'quantity' => $expenseItem->quantity,
+                'unit_price' => $expenseItem->expense_price,
+                'total_price' => $expenseItem->total_price,
+                'item' => null,
+                'expense' => $expenseItem->expense
+            ]);
+        }
+
         $this->backedPrice = $this->invoice->backed_plates_price;
         $this->backedQty = $this->invoice->order->backing_qty;
         $this->backedTotal = $this->backedPrice * $this->backedQty;
