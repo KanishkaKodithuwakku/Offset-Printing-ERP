@@ -24,7 +24,7 @@ class InvoicePrintPreview extends Component
     {
         $this->invoice = Invoice::find($invoiceId);
         $this->printedCount = $this->invoice->print_count;
-        $this->invoiceItems = InvoiceItem::where('invoice_id', $invoiceId)->get();
+        $this->invoiceItems = InvoiceItem::with(['item', 'expense'])->where('invoice_id', $invoiceId)->get();
         $this->backedPrice = $this->invoice->backed_plates_price;
         $this->backedQty = $this->invoice->order->backing_qty;
         $this->backedTotal = $this->backedPrice * $this->backedQty;

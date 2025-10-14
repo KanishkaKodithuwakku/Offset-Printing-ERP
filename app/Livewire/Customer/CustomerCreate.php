@@ -39,6 +39,19 @@ class CustomerCreate extends Component
     #[Validate('nullable|string|max:15', message: 'Mobile number must not exceed 15 characters')]
     public $mobile_number;
 
+    // Credit Limit fields
+    #[Validate('nullable|integer|min:0', message: 'Credit days must be a positive number')]
+    public $credit_limit_1_days;
+
+    #[Validate('nullable|numeric|min:0', message: 'Credit amount must be a positive number')]
+    public $credit_limit_1_amount;
+
+    #[Validate('nullable|integer|min:0', message: 'Credit days must be a positive number')]
+    public $credit_limit_2_days;
+
+    #[Validate('nullable|numeric|min:0', message: 'Credit amount must be a positive number')]
+    public $credit_limit_2_amount;
+
     public function mount(Customer $customer)
     {
         $this->authUser = auth()->user();
@@ -54,6 +67,10 @@ class CustomerCreate extends Component
             $this->country = $customer->country;
             $this->status = $customer->status;
             $this->mobile_number = $customer->mobile_number;
+            $this->credit_limit_1_days = $customer->credit_limit_1_days;
+            $this->credit_limit_1_amount = $customer->credit_limit_1_amount;
+            $this->credit_limit_2_days = $customer->credit_limit_2_days;
+            $this->credit_limit_2_amount = $customer->credit_limit_2_amount;
         }
     }
 
@@ -73,6 +90,10 @@ class CustomerCreate extends Component
                 'country' => $this->country,
                 'status' => $this->status,
                 'mobile_number' => $this->mobile_number,
+                'credit_limit_1_days' => $this->credit_limit_1_days,
+                'credit_limit_1_amount' => $this->credit_limit_1_amount,
+                'credit_limit_2_days' => $this->credit_limit_2_days,
+                'credit_limit_2_amount' => $this->credit_limit_2_amount,
             ]);
 
             session()->flash('success', 'Customer has been updated successfully!');
@@ -92,6 +113,10 @@ class CustomerCreate extends Component
                 'status' => $this->status,
                 'mobile_number' => $this->mobile_number,
                 'customer_number' => $customerNumber,
+                'credit_limit_1_days' => $this->credit_limit_1_days,
+                'credit_limit_1_amount' => $this->credit_limit_1_amount,
+                'credit_limit_2_days' => $this->credit_limit_2_days,
+                'credit_limit_2_amount' => $this->credit_limit_2_amount,
             ]);
 
             session()->flash('success', 'Customer has been created successfully!');

@@ -13,6 +13,7 @@ class InvoiceItem extends Model
     protected $fillable = [
         'invoice_id',
         'item_id',
+        'expense_id',
         'quantity',
         'unit_price',
         'total_price',
@@ -32,5 +33,13 @@ class InvoiceItem extends Model
     public function item()
     {
         return $this->belongsTo(Item::class); // Assuming you have a Product model
+    }
+
+    /**
+     * Get the other expense associated with the invoice item.
+     */
+    public function expense()
+    {
+        return $this->belongsTo(OtherExpense::class);
     }
 }

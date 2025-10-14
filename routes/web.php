@@ -72,6 +72,8 @@ use App\Livewire\Reports\StockMovementReport;
 use App\Livewire\Transaction\TransactionList;
 use App\Livewire\Customer\PrintPaymentReceipt;
 use App\Livewire\Customer\CustomerOrderDetails;
+use App\Livewire\OtherExpense\OtherExpenseCreate;
+use App\Livewire\OtherExpense\OtherExpenseList;
 
 use App\Livewire\Reports\LedgerStatementReport;
 use App\Livewire\MisReports\SalesDatewiseReport;
@@ -148,6 +150,10 @@ Route::middleware([
     Route::get('/uoms', UomList::class)->name('uoms.list');
     Route::get('/uoms/create', UomForm::class)->name('uoms.create');
     Route::get('/uoms/{uomId}/edit', UomForm::class)->name('uoms.edit');
+
+    Route::get('/other-expenses', OtherExpenseList::class)->name('other-expenses');
+    Route::get('/other-expenses/create', OtherExpenseCreate::class)->name('other-expense.create');
+    Route::get('/other-expenses/{expenseId}/edit', OtherExpenseCreate::class)->name('other-expense.edit');
 
     Route::get('/dispatch-item/{orderId}', DispatchItem::class)->name('dispatch-items');
     Route::get('/print', PrintPreview::class)->name('print-items');
