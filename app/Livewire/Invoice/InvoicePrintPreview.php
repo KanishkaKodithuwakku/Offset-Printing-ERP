@@ -24,13 +24,13 @@ class InvoicePrintPreview extends Component
     {
         $this->invoice = Invoice::find($invoiceId);
         $this->printedCount = $this->invoice->print_count;
-        $this->invoiceItems = InvoiceItem::where('invoice_id', $invoiceId)->get();
+        $this->invoiceItems = InvoiceItem::with(['item', 'expense'])->where('invoice_id', $invoiceId)->get();
         $this->backedPrice = $this->invoice->backed_plates_price;
         $this->backedQty = $this->invoice->order->backing_qty;
         $this->backedTotal = $this->backedPrice * $this->backedQty;
         $this->printCount = $this->invoice->print_count > 0 ? 'DUPLICATE COPY - ' . $this->invoice->print_count : '';
         $backed_plates_price = $this->backedPrice*$this->backedQty;
-        $this->customerTotalAmount = $this->getCustomerTotalAmount($this->invoice->customer_id)+$backed_plates_price;
+        $this->customerTotalAmount = $this->getCustomerTotalAmount($this->invoice->customer_id);
     }
 
     public function getCustomerTotalAmount($customerId)

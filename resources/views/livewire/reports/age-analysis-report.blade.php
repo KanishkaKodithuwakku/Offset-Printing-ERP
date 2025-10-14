@@ -64,32 +64,16 @@
                         <td class="tot px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap" style="text-align:right !important;">
                             {{ number_format($invoice['total_amount'], 2) }}</td>
                         <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap" style="text-align:right !important;">
-                            @if ($invoice['age_category'] == '1-30 Days')
-                                {{ number_format($invoice['total_amount'], 2) }}
-                            @else
-                                0.00
-                            @endif
+                            {{ number_format($invoice['amount_1_30'], 2) }}
                         </td>
-                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap">
-                            @if ($invoice['age_category'] == '31-60 Days')
-                                {{ number_format($invoice['total_amount'], 2) }}
-                            @else
-                                0.00
-                            @endif
+                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap" style="text-align:right !important;">
+                            {{ number_format($invoice['amount_31_60'], 2) }}
                         </td>
-                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap">
-                            @if ($invoice['age_category'] == '61-90 Days')
-                                {{ number_format($invoice['total_amount'], 2) }}
-                            @else
-                                0.00
-                            @endif
+                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap" style="text-align:right !important;">
+                            {{ number_format($invoice['amount_61_90'], 2) }}
                         </td>
-                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap">
-                            @if ($invoice['age_category'] == 'Over 90 Days')
-                                {{ number_format($invoice['total_amount'], 2) }}
-                            @else
-                                0.00
-                            @endif
+                        <td class="px-4 py-2 text-sm text-right text-gray-500 whitespace-nowrap" style="text-align:right !important;">
+                            {{ number_format($invoice['amount_over_90'], 2) }}
                         </td>
                     </tr>
                 @endforeach
