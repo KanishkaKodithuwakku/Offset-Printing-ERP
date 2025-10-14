@@ -15,6 +15,7 @@ return [
 
     'name' => env('APP_NAME', 'ERP'),
     'company_name' => env('COMPANY_NAME', 'Default Company Name'),
+    'acc_url' => env('ACC_URL', ''),
     /*
     |--------------------------------------------------------------------------
     | Application Environment
