@@ -164,11 +164,7 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                 </h4>
 
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{-- @if ($stockProcess === false)
-                    One or more items stock balance is 0
-                    @else
                     {{ session('error') }}
-                    @endif --}}
                 </p>
             </div>
         </div>

@@ -282,7 +282,7 @@ class InvoiceView extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Error creating accounting entries: ' . $e->getMessage());
-            $invoice->delete();
+            // Don't delete the invoice - let the user see the error and fix it
         }
         // Redirect to print preview
         // return $this->redirect('/invoice/print-preview/' . $this->invoiceId, navigate: true);
