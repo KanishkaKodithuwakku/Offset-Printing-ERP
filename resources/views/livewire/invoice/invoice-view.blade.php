@@ -491,7 +491,7 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                                        wire:model="selectedOtherExpenses"
                                                        value="{{ $expense['id'] }}"
                                                        @change="selectedCount = $wire.selectedOtherExpenses.length"
-                                                       class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+                                                       class="rounded mr-2 border-gray-300 text-brand-600 focus:ring-brand-500">
                                                 <div class="flex-1 min-w-0">
                                                     <div class="text-xs font-medium text-gray-900 dark:text-white">
                                                         {{ $expense['expense_name'] }}

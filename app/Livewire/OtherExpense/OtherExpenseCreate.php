@@ -45,7 +45,8 @@ class OtherExpenseCreate extends Component
                     'description' => $this->description,
                     'price' => $this->price,
                 ]);
-                session()->flash('success', 'Other expense updated successfully!');
+                session()->flash('success', 'Expense updated successfully!');
+                return $this->redirect('/other-expenses', navigate: true);
             } else {
                 // Create new expense
                 OtherExpense::create([
@@ -53,10 +54,9 @@ class OtherExpenseCreate extends Component
                     'description' => $this->description,
                     'price' => $this->price,
                 ]);
-                session()->flash('success', 'Other expense created successfully!');
+                session()->flash('success', 'Expense create successfull!');
+                return $this->redirect('/other-expenses', navigate: true);
             }
-
-            $this->resetForm();
         } catch (\Exception $e) {
             session()->flash('error', 'Error saving expense: ' . $e->getMessage());
         }
