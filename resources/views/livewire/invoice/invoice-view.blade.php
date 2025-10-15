@@ -358,8 +358,8 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                     <td class="px-6 py-3">
                                         <p class="text-gray-500 text-theme-sm dark:text-gray-400">
                                             @if ($status === 'invoicing')
-                                            <input type="text" wire:model.live="backedPrice"
-                                                wire:input="updateBackedPrice()" min="0" max=""
+                                            <input type="text" wire:model.blur="backedPrice"
+                                                wire:blur="updateBackedPrice()" min="1"
                                                 class="w-24 border p-1 text-right text-xs" style="">
                                             @else
                                             {{ number_format($backedPrice, 2) }}

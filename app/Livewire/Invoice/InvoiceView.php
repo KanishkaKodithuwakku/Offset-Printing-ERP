@@ -563,8 +563,8 @@ class InvoiceView extends Component
         // 1) strip commas and cast to float
         $clean = (float) str_replace(',', '', $this->backedPrice);
 
-        // 2) re-format with exactly two decimal places
-        $this->backedPrice = number_format($clean, 2, '.', '');
+        // 2) store as clean number without forced decimal formatting
+        $this->backedPrice = $clean;
 
         // 3) re-calculate grand total
         $this->calculateTotal();
