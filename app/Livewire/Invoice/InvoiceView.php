@@ -505,16 +505,21 @@ class InvoiceView extends Component
             // 1) Update each existing invoice-item line
             foreach ($this->invoiceItems as $item) {
                 if (isset($item['id']) && $item['id']) {
-                    // Update existing invoice item
-                    InvoiceItem::where('id', $item['id'])->update([
-                        'unit_price' => $item['unit_price'],
-                        'total_price' => $item['total_price'],
-                    ]);
-                    $regularItemsProcessed++;
-                 } elseif (isset($item['is_other_expense']) && $item['is_other_expense']) {
-                     // Other expenses are now handled immediately when added/updated/removed
-                     // So we just skip them here since they're already in the database
-                     $otherExpensesProcessed++;
+                    if (isset($item['is_other_expense']) && $item['is_other_expense']) {
+                        // Update existing other expense item
+                        ExpensesItem::where('id', $item['id'])->update([
+                            'expense_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'],
+                        ]);
+                        $otherExpensesProcessed++;
+                    } else {
+                        // Update existing regular invoice item
+                        InvoiceItem::where('id', $item['id'])->update([
+                            'unit_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'],
+                        ]);
+                        $regularItemsProcessed++;
+                    }
                  }
             }
 
