@@ -460,7 +460,6 @@ class JobOrderForm extends Component
                 })
                 ->when($this->authUser->mode !== 'admin', function ($query) {
                     $query->where('branch_id', $this->branch_id);
-                    $query->where('status', 'active');
                 })
                 ->limit(5)
                 ->get();
@@ -906,7 +905,7 @@ class JobOrderForm extends Component
                 $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
         :class="{\'dark bg-gray-900\': darkMode === true}"';
 
-        $customers = Customer::all();
+        $customers = Customer::where('status', 'active')->get();
         $users = User::all();
 
         return view('livewire.job.job-order', ['customers' =>  $customers, 'users' => $users])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
