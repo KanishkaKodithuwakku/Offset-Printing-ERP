@@ -143,12 +143,7 @@
 
                             @if(strpos(session('error'), 'Backup count limit exceeded') !== false)
                                 <div class="mt-3 text-xs text-red-600 dark:text-red-400">
-                                    <p class="font-medium mb-2">To fix this issue:</p>
-                                    <ol class="list-decimal list-inside space-y-1">
-                                        <li>Click on <strong>"View Existing Backups"</strong> link above</li>
-                                        <li>Delete older backup files to make space for new ones</li>
-                                        <li>Maximum backup limit is set in <code class="bg-red-100 dark:bg-red-900 px-1 rounded">BACKUP_MAX_COUNT</code> in your .env file</li>
-                                    </ol>
+                                    
                                 </div>
                             @endif
                         </div>

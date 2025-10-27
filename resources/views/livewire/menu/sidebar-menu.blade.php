@@ -58,6 +58,10 @@
             @include('livewire.menu.settings.index')
             @endif
 
+            @if (auth()->user()->mode === 'admin')
+            @include('livewire.menu.administration.index')
+            @endif
+
         </nav>
         <!-- Sidebar Menu -->
 

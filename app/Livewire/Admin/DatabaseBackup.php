@@ -42,7 +42,7 @@ class DatabaseBackup extends Component
                     $this->isBackingUp = false;
                     $this->backupProgress = 0;
                     $this->backupStatus = 'Backup count limit exceeded';
-                    session()->flash('error', "Backup count limit exceeded! Maximum allowed: {$maxBackups}. Current backups: {$currentCount}. Please delete old backups from the backup list to create new ones.");
+                    session()->flash('error', "Backup count limit exceeded! Maximum allowed: {$maxBackups}.Please delete old backups from the backup list to create new ones.");
                     return;
                 }
             }
