@@ -183,7 +183,7 @@
                         </th>
                         <th scope="col"
                             class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
-                            Job Order Number
+                            GRN/Job Order Number
                         </th>
                         <th scope="col"
                             class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">

@@ -180,6 +180,12 @@ class StockMovementReport extends Component
         // Then join job_orders to get the job_number
         ->leftJoin('job_orders as o', 'o.id', '=', 'd.job_order_id')
 
+        // Join grns to get the grn_code when movement is GRN
+        ->leftJoin('grns as g', function($join) {
+            $join->on('g.id', '=', 's.p_id')
+                 ->where('s.table_name', 'grn');
+        })
+
         ->select([
             'i.item_code',
             'i.item_name',
@@ -206,8 +212,11 @@ class StockMovementReport extends Component
                    AND q3.created_at <= s.created_at
                 ) as current_balance
             "),
-            // ← Here’s the new column:
-            'o.job_number as job_order_number',
+            // Job order number or GRN code based on movement type
+            DB::raw("CASE
+                WHEN s.table_name = 'grn' THEN g.grn_code
+                ELSE o.job_number
+            END as job_order_number"),
         ])
         ->where('s.branch_id', $branchId);
 
