@@ -30,6 +30,23 @@ class DatabaseBackup extends Component
         session()->forget(['success', 'error']);
 
         try {
+            // Check if backup count limit is exceeded
+            $maxBackups = (int) (config('app.backup_max_count') ?? env('BACKUP_MAX_COUNT', 10));
+            $backupDir = storage_path('app/backups');
+
+            if (is_dir($backupDir)) {
+                $files = glob($backupDir . '/backup_*.sql');
+                $currentCount = count($files);
+
+                if ($currentCount >= $maxBackups) {
+                    $this->isBackingUp = false;
+                    $this->backupProgress = 0;
+                    $this->backupStatus = 'Backup count limit exceeded';
+                    session()->flash('error', "Backup count limit exceeded! Maximum allowed: {$maxBackups}. Current backups: {$currentCount}. Please delete old backups from the backup list to create new ones.");
+                    return;
+                }
+            }
+
             // Get database configuration
             $config = config('database.connections.mysql');
 
@@ -86,6 +103,9 @@ class DatabaseBackup extends Component
                 $this->backupProgress = 80;
                 $this->backupStatus = 'Backup completed successfully!';
 
+                // Limit backup count
+                $this->limitBackupCount();
+
                 // Create download URL
                 $this->downloadUrl = route('admin.database.backup.download', ['file' => $this->backupFileName]);
 
@@ -93,6 +113,9 @@ class DatabaseBackup extends Component
                 $this->backupStatus = 'Ready for download';
 
                 session()->flash('success', 'Database backup completed successfully!');
+
+                // Redirect to backup list page
+                return $this->redirect(route('admin.database.backup.list'), navigate: true);
             } else {
                 $errorOutput = $process->getErrorOutput();
                 $exitCode = $process->getExitCode();
@@ -108,11 +131,14 @@ class DatabaseBackup extends Component
                 if ($this->backupUsingPHP($config, $backupPath)) {
                     $this->backupProgress = 80;
                     $this->backupStatus = 'Backup completed successfully using alternative method!';
-                    $this->downloadUrl = route('admin.database.backup.download', ['file' => $this->backupFileName]);
-                    $this->backupProgress = 100;
-                    $this->backupStatus = 'Ready for download';
+
+                    // Limit backup count
+                    $this->limitBackupCount();
+
                     session()->flash('success', 'Database backup completed successfully using alternative method!');
-                    return;
+
+                    // Redirect to backup list page
+                    return $this->redirect(route('admin.database.backup.list'), navigate: true);
                 }
 
                 // If PHP backup also failed, show detailed error
@@ -208,6 +234,49 @@ class DatabaseBackup extends Component
 
         // Fallback
         return $isWindows ? 'mysqldump.exe' : 'mysqldump';
+    }
+
+    /**
+     * Limit the number of backup files by deleting oldest ones
+     */
+    private function limitBackupCount()
+    {
+        try {
+            $maxBackups = (int) (config('app.backup_max_count') ?? env('BACKUP_MAX_COUNT', 10));
+            $backupDir = storage_path('app/backups');
+
+            if (!is_dir($backupDir)) {
+                return;
+            }
+
+            // Get all backup files
+            $files = glob($backupDir . '/backup_*.sql');
+
+            if (count($files) <= $maxBackups) {
+                return;
+            }
+
+            // Sort by modification time (oldest first)
+            usort($files, function($a, $b) {
+                return filemtime($a) - filemtime($b);
+            });
+
+            // Delete oldest files beyond the limit
+            $filesToDelete = array_slice($files, 0, count($files) - $maxBackups);
+
+            foreach ($filesToDelete as $file) {
+                if (file_exists($file)) {
+                    unlink($file);
+                    Log::info("Deleted old backup: " . basename($file));
+                }
+            }
+
+            if (count($filesToDelete) > 0) {
+                Log::info("Backup count limited to {$maxBackups}. Deleted " . count($filesToDelete) . " old backup(s).");
+            }
+        } catch (\Exception $e) {
+            Log::error('Error limiting backup count: ' . $e->getMessage());
+        }
     }
 
     /**
