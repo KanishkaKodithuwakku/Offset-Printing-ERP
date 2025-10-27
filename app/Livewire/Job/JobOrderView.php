@@ -452,7 +452,34 @@ class JobOrderView extends Component
 
     public function updateOrderItems()
     {
-        session()->flash('success', 'Job Order updated successfully!');
+        try {
+            // Loop through all order items and save them to the database
+            foreach ($this->orderItems as $orderItem) {
+                // Check if the quantity exceeds the available stock
+                if ($orderItem['quantity'] > $orderItem['stock_balance']) {
+                    session()->flash('error', 'Quantity cannot exceed available stock for item: ' . $orderItem['name']);
+                    return;
+                }
+
+                // Update the JobOrderItem in the database
+                $jobOrderItem = JobOrderItem::find($orderItem['id']);
+                if ($jobOrderItem) {
+                    $jobOrderItem->quantity = $orderItem['quantity'];
+                    $jobOrderItem->total = $orderItem['quantity'] * $jobOrderItem->price;
+                    $jobOrderItem->save();
+                }
+            }
+
+            // Recalculate the overall total for the job order
+            $this->calculateTotal();
+
+            // Reload the order details to reflect changes
+            $this->loadOrderDetails($this->jobOrderId);
+
+            session()->flash('success', 'Job Order updated successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update job order: ' . $e->getMessage());
+        }
     }
 
     public function releseOrder($jobOrderId)

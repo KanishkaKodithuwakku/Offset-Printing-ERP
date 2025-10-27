@@ -498,8 +498,8 @@
                                             <p class="text-gray-500 text-theme-sm dark:text-gray-400 ">
                                                 @if (($status === 'pending' || $status === 'designing') && ($role ===
                                                 'design' || $role === 'admin'))
-                                                <input type="number" wire:model.live="orderItems.{{ $index }}.quantity"
-                                                    wire:change="updateTotal({{ $index }})" min="0"
+                                                <input type="number" wire:model="orderItems.{{ $index }}.quantity"
+                                                    min="0"
                                                     max="{{ $orderItem['stock_balance'] }}"
                                                     class="w-16 border p-1 text-center border-gray-200 dark:border-gray-800"
                                                     style="{{ $orderItem['stock_balance'] == 0 ? 'color: red;' : '' }}">
