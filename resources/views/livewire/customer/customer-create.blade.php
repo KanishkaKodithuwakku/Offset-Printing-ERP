@@ -141,7 +141,26 @@
 
                 <!-- Credit Limit & Period Tab Content -->
                 <div id="credit-content" class="tab-content hidden">
-                    <div class="space-y-8">
+                    <div class="space-y-8" wire:ignore.self>
+                        <!-- Customer Type Selection -->
+                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6" wire:ignore>
+                            <h4 class="text-sm font-medium text-gray-800 dark:text-white/90 mb-4">Customer Type</h4>
+                            <div class="flex gap-6">
+                                <label class="flex items-center">
+                                    <input type="radio" wire:model.live="customer_type" value="credit"
+                                        class="form-radio h-4 w-4 text-brand-600 border-gray-300 focus:ring-brand-500" />
+                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Credit Customer</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" wire:model.live="customer_type" value="cash"
+                                        class="form-radio h-4 w-4 text-brand-600 border-gray-300 focus:ring-brand-500" />
+                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Cash Customer</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div wire:key="credit-limit-section" class="space-y-6">
+                        @if($customer_type === 'credit')
                         <!-- Credit Limit 1 -->
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6">
                             <h4 class="text-sm font-medium text-gray-800 dark:text-white/90 mb-4">Credit Limit 1</h4>
@@ -194,6 +213,8 @@
                                     @enderror
                                 </div>
                             </div>
+                        </div>
+                        @endif
                         </div>
                     </div>
                 </div>

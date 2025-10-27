@@ -52,6 +52,8 @@ class CustomerCreate extends Component
     #[Validate('nullable|numeric|min:0', message: 'Credit amount must be a positive number')]
     public $credit_limit_2_amount;
 
+    public $customer_type = 'cash';
+
     public function mount(Customer $customer)
     {
         $this->authUser = auth()->user();
@@ -71,6 +73,12 @@ class CustomerCreate extends Component
             $this->credit_limit_1_amount = $customer->credit_limit_1_amount;
             $this->credit_limit_2_days = $customer->credit_limit_2_days;
             $this->credit_limit_2_amount = $customer->credit_limit_2_amount;
+            // Determine customer type
+            if ($customer->is_credit_customer) {
+                $this->customer_type = 'credit';
+            } else {
+                $this->customer_type = 'cash';
+            }
         }
     }
 
@@ -90,10 +98,12 @@ class CustomerCreate extends Component
                 'country' => $this->country,
                 'status' => $this->status,
                 'mobile_number' => $this->mobile_number,
-                'credit_limit_1_days' => $this->credit_limit_1_days,
-                'credit_limit_1_amount' => $this->credit_limit_1_amount,
-                'credit_limit_2_days' => $this->credit_limit_2_days,
-                'credit_limit_2_amount' => $this->credit_limit_2_amount,
+                'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,
+                'credit_limit_1_amount' => $this->customer_type === 'credit' ? $this->credit_limit_1_amount : null,
+                'credit_limit_2_days' => $this->customer_type === 'credit' ? $this->credit_limit_2_days : null,
+                'credit_limit_2_amount' => $this->customer_type === 'credit' ? $this->credit_limit_2_amount : null,
+                'is_credit_customer' => $this->customer_type === 'credit',
+                'is_cash_customer' => $this->customer_type === 'cash',
             ]);
 
             session()->flash('success', 'Customer has been updated successfully!');
@@ -113,10 +123,12 @@ class CustomerCreate extends Component
                 'status' => $this->status,
                 'mobile_number' => $this->mobile_number,
                 'customer_number' => $customerNumber,
-                'credit_limit_1_days' => $this->credit_limit_1_days,
-                'credit_limit_1_amount' => $this->credit_limit_1_amount,
-                'credit_limit_2_days' => $this->credit_limit_2_days,
-                'credit_limit_2_amount' => $this->credit_limit_2_amount,
+                'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,
+                'credit_limit_1_amount' => $this->customer_type === 'credit' ? $this->credit_limit_1_amount : null,
+                'credit_limit_2_days' => $this->customer_type === 'credit' ? $this->credit_limit_2_days : null,
+                'credit_limit_2_amount' => $this->customer_type === 'credit' ? $this->credit_limit_2_amount : null,
+                'is_credit_customer' => $this->customer_type === 'credit',
+                'is_cash_customer' => $this->customer_type === 'cash',
             ]);
 
             session()->flash('success', 'Customer has been created successfully!');
