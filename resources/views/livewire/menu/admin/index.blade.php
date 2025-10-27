@@ -69,5 +69,18 @@
             <!-- Dropdown Menu End -->
         </li>
         @endif
+
+        <!-- Database Backup Menu -->
+        @if (auth()->user()->mode === 'admin')
+        <li>
+            <a wire:navigate href="{{ route('admin.database.backup') }}" class="menu-item group"
+                :class="page === 'DatabaseBackup' ? 'menu-item-active' : 'menu-item-inactive'">
+               
+                <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                    Database Backup
+                </span>
+            </a>
+        </li>
+        @endif
     </ul>
 </div>

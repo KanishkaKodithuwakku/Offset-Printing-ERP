@@ -263,6 +263,10 @@ Route::get('/monthly-targets', \App\Livewire\MonthlyTarget\MonthlyTargetList::cl
 Route::get('/monthly-targets/create', \App\Livewire\MonthlyTarget\MonthlyTargetForm::class)->name('monthly-targets.create');
 Route::get('/monthly-targets/{id}/edit', \App\Livewire\MonthlyTarget\MonthlyTargetEdit::class)->name('monthly-targets.edit');
 
-
+// Database Backup Routes
+Route::get('/database-backup', App\Livewire\Admin\DatabaseBackup::class)->name('admin.database.backup');
+Route::get('/database-backup/list', App\Livewire\Admin\BackupList::class)->name('admin.database.backup.list');
+Route::get('/database-backup/download/{file}', [App\Http\Controllers\Admin\BackupController::class, 'download'])->name('admin.database.backup.download');
+Route::delete('/database-backup/delete/{file}', [App\Http\Controllers\Admin\BackupController::class, 'delete'])->name('admin.database.backup.delete');
 
 });
