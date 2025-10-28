@@ -73,9 +73,11 @@
                 (Duplicate #{{ $invoice->print_count }})
                 @endif
             </h2>
+            <p style="margin: 2px 0;padding:0px;font-weight: 600;">{{ $invoice->customer->is_credit_customer ? 'Credit' : 'Cash' }}</p>
             <p style="margin: 2px 0;padding:0px;">Date: {{ $invoice->created_at->format('F j, Y') }}</p>
             <p style="margin: 2px 0;padding:0px;">Invoice No: {{ $invoice->invoice_number }}</p>
             <p style="margin: 2px 0;padding:0px;">PO No: {{ $invoice->order->customer_po_number }}</p>
+
         </div>
     </div>
 

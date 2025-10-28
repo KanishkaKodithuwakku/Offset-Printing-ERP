@@ -184,6 +184,21 @@ class InvoiceView extends Component
                 // Credit Limit Validation
                 $customer = $invoice->customer;
 
+                // Check if customer is cash customer and has outstanding balance
+                if ($customer->is_cash_customer) {
+                    $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                        ->where('status', '!=', 'cancelled')
+                        ->where('amount_due', '>', 0)
+                        ->where('id', '!=', $invoice->id) // Exclude current invoice
+                        ->sum('amount_due');
+
+                    if ($currentOutstanding > 0) {
+                        session()->flash('error', "Can't create invoice. This customer have " . number_format($currentOutstanding, 2) . " outstanding balance. Please clear and generate invoice.");
+                        DB::rollBack();
+                        return;
+                    }
+                }
+
                 // Calculate customer's current outstanding balance (excluding this invoice)
                 $currentOutstanding = Invoice::where('customer_id', $customer->id)
                     ->where('status', '!=', 'cancelled')
