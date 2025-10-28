@@ -13,6 +13,9 @@ class StockMovementReport extends Component
 {
     use WithPagination;
 
+    // Use Laravel's default Tailwind pagination views
+    protected $paginationTheme = 'tailwind';
+
     public $items;
     public $selectedItemId = '';
     public $movementType = '';
@@ -69,12 +72,33 @@ class StockMovementReport extends Component
         }
     }
 
+    public function updatedSelectedItemId()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMovementType()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStartDate()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedEndDate()
+    {
+        $this->resetPage();
+    }
+
     public function setItemId($itemId)
     {
         $item = Item::find($itemId);
         $this->selectedItemId = $itemId;
         $this->searchTerm = $item->item_name;
         $this->searchResults = [];
+        $this->resetPage();
     }
 
     // Fetch stock movements based on filters
