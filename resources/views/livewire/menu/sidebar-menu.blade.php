@@ -58,7 +58,7 @@
             @include('livewire.menu.settings.index')
             @endif
 
-            @if (auth()->user()->mode === 'admin')
+            @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'accounts')
             @include('livewire.menu.administration.index')
             @endif
 
