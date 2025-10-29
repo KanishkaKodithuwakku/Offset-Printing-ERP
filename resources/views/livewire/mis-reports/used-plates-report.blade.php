@@ -1,11 +1,11 @@
 <div class="p-4 bg-white border rounded-xl dark:border-success-500/30 dark:bg-success-500/15" style="font-family:'Open Sans',sans-serif;">
     <div class="mb-2 text-center">
         <h2 style="font-size: 18px; font-weight: bold;text-align:center;">{{ config('app.company_name') }}</h2>
-        <h3 class="text-lg font-semibold">Used Plates Report</h3>
+        <h3 class="text-lg font-semibold">Plate Consumption Detail Report</h3>
         <div class="mt-1 mb-4 text-sm">From: <span class="font-semibold">{{ $startDate }}</span> To: <span class="font-semibold">{{ $endDate }}</span></div>
     </div>
     <div class="p-6" x-data="{ showPrint: false }">
-        <h1 class="text-lg font-semibold text-gray-800 dark:text-white/90">Used Plates Items Listing</h1>
+
         <div class="p-4 bg-white rounded shadow">
             <!-- Filters Section -->
             <div class="flex gap-4 pb-4 no-print">
@@ -100,7 +100,7 @@
                             <tr class="bg-gray-100">
                                 <td colspan="4" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
                                 <td class="px-3 py-2 text-xs font-semibold text-left">{{ number_format($totalUsed) }}</td>
-                                
+
                             </tr>
                         </tfoot>
                     </table>
@@ -141,6 +141,8 @@
                 font-size: 10pt !important;
                 page-break-inside: auto;
                 font-family: 'Outfit', sans-serif !important;
+                border-left: 2px solid #000 !important;
+                border-right: 2px solid #000 !important;
             }
 
             tr {
@@ -153,6 +155,12 @@
 
             tfoot {
                 display: table-footer-group;
+            }
+
+            /* Bold borders for header and footer in print */
+            thead th,
+            tfoot td {
+                border: 2px solid #000 !important;
             }
         }
 
@@ -185,7 +193,7 @@
              const printWindow = window.open('', '_blank');
 
              // Get the report details
-             const reportTitle = 'Used Plates Report';
+             const reportTitle = 'Plate Consumption Detail Report';
              const startDate = '{{ $startDate }}';
              const endDate = '{{ $endDate }}';
              const companyName = '{{ config("app.company_name") }}';
@@ -237,17 +245,25 @@
                              border-collapse: collapse;
                              font-size: 9pt;
                              margin-top: 10px;
+                             border-left: 2px solid #000000;
+                             border-right: 2px solid #000000;
                          }
 
                          thead {
                              background-color: #f3f4f6;
                          }
 
-                         th, td {
-                             border: 1px solid #ddd;
-                             padding: 6px 8px;
-                             text-align: left;
-                         }
+                        th, td {
+                            border: 1px solid #000000;
+                            padding: 6px 8px;
+                            text-align: left;
+                        }
+
+                        /* Bold borders for header and footer inside print window */
+                        thead th,
+                        tfoot td {
+                            border: 2px solid #000000;
+                        }
 
                          th {
                              font-weight: bold;

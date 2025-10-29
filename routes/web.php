@@ -228,6 +228,8 @@ Route::middleware([
         ->name('mis-reports.customer-wise-sales-report.print');
     Route::get('/mis-reports/used-plates-report', App\Livewire\MisReports\UsedPlatesReport::class)
         ->name('mis-reports.used-plates-report');
+    Route::get('/mis-reports/plate-summary-report', App\Livewire\MisReports\PlateSummaryReport::class)
+        ->name('mis-reports.plate-summary-report');
 
     Route::get('/mis-reports/sales-datewise-report/print', App\Livewire\MisReports\SalesDatewiseReportPrint::class)->name('mis-reports.sales-datewise-report.print');
 

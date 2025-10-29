@@ -57,6 +57,35 @@
                                     </a>
                                 </li>
 
+                                <li>
+                                    <a wire:navigate href="{{ route('mis-reports.used-plates-report') }}" class="menu-dropdown-item group"
+                                        :class="page === 'UsedPlatesReport' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                                        Plate Consumption Detail Report
+                                        <span class="absolute flex items-center gap-1 right-3">
+                                            <span class="menu-dropdown-badge"
+                                                :class="page === 'UsedPlatesReport' ? 'menu-dropdown-badge-active' :
+                                                    'menu-dropdown-badge-inactive'">
+
+                                            </span>
+                                        </span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a wire:navigate href="{{ route('mis-reports.plate-summary-report') }}" class="menu-dropdown-item group"
+                                        :class="page === 'PlateSummaryReport' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                                        Plate Consumption Summary Report
+                                        <span class="absolute flex items-center gap-1 right-3">
+                                            <span class="menu-dropdown-badge"
+                                                :class="page === 'PlateSummaryReport' ? 'menu-dropdown-badge-active' :
+                                                    'menu-dropdown-badge-inactive'">
+
+                                            </span>
+                                        </span>
+                                    </a>
+                                </li>
+
                             </ul>
                         </div>
                         <!-- Dropdown Menu End -->
@@ -91,42 +120,6 @@
                                 <li>
                                     <a wire:navigate href="{{ route('mis-reports.customer-wise-sales-report') }}" class="menu-dropdown-item group">
                                          Customer Wise Sales Report
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <!-- Dropdown Menu End -->
-                    </li>
-                    <!-- Plates Report Dropdown -->
-                    <li>
-                        <a href="#" @click.prevent="selected = (selected === 'PlatesReport' ? '' : 'PlatesReport')" class="menu-item group"
-                            :class="(selected === 'PlatesReport') ? 'menu-item-active' : 'menu-item-inactive'">
-                            <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
-                                Plates Report
-                            </span>
-                            <svg class="menu-item-arrow absolute right-2.5 top-1/2 -translate-y-1/2 stroke-current"
-                                :class="[(selected === 'PlatesReport') ? 'menu-item-arrow-active' : 'menu-item-arrow-inactive', sidebarToggle ? 'lg:hidden' : '']"
-                                width="20" height="20" viewBox="0 0 20 20" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4.79175 7.39584L10.0001 12.6042L15.2084 7.39585" stroke="" stroke-width="1.5"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </a>
-                        <!-- Dropdown Menu Start -->
-                        <div class="overflow-hidden transform translate" :class="(selected === 'PlatesReport') ? 'block' : 'hidden'">
-                            <ul :class="sidebarToggle ? 'lg:hidden' : 'flex'" class="flex flex-col mt-1 menu-dropdown pl-9">
-                                <li>
-                                    <a wire:navigate href="{{ route('mis-reports.used-plates-report') }}" class="menu-dropdown-item group"
-                                        :class="page === 'UsedPlatesReport' ? 'menu-dropdown-item-active' :
-                                            'menu-dropdown-item-inactive'">
-                                        Used Plates Report
-                                        <span class="absolute flex items-center gap-1 right-3">
-                                            <span class="menu-dropdown-badge"
-                                                :class="page === 'UsedPlatesReport' ? 'menu-dropdown-badge-active' :
-                                                    'menu-dropdown-badge-inactive'">
-
-                                            </span>
-                                        </span>
                                     </a>
                                 </li>
                             </ul>

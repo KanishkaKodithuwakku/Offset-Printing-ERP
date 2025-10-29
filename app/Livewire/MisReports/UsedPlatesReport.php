@@ -23,7 +23,7 @@ class UsedPlatesReport extends Component
     public function mount()
     {
         $this->authUser = auth()->user();
-        $this->startDate = Carbon::now()->subDays(30)->toDateString();
+        $this->startDate = Carbon::now()->startOfMonth()->toDateString();
         $this->endDate = Carbon::now()->toDateString();
     }
 
