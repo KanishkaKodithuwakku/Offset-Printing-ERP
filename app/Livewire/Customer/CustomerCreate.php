@@ -37,6 +37,9 @@ class CustomerCreate extends Component
     #[Validate('nullable|in:active,inactive', message: 'Invalid status')]
     public $status = 'active';
 
+    #[Validate('nullable|boolean', message: 'PO required must be a boolean')]
+    public $po_required = false;
+
     #[Validate('nullable|string|max:15', message: 'Mobile number must not exceed 15 characters')]
     public $mobile_number;
 
@@ -111,6 +114,7 @@ class CustomerCreate extends Component
             $this->city = $customer->city;
             $this->country = $customer->country;
             $this->status = $customer->status;
+            $this->po_required = $customer->po_required ?? false;
             $this->mobile_number = $customer->mobile_number;
             $this->credit_limit_1_days = $customer->credit_limit_1_days;
             $this->credit_limit_1_amount = $customer->credit_limit_1_amount;
@@ -195,6 +199,7 @@ class CustomerCreate extends Component
                 'city' => $this->city,
                 'country' => $this->country,
                 'status' => $this->status,
+                'po_required' => $this->po_required ?? false,
                 'mobile_number' => $this->mobile_number,
                 'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,
                 'credit_limit_1_amount' => $this->customer_type === 'credit' ? $this->credit_limit_1_amount : null,
@@ -219,6 +224,7 @@ class CustomerCreate extends Component
                 'city' => $this->city,
                 'country' => $this->country,
                 'status' => $this->status,
+                'po_required' => $this->po_required ?? false,
                 'mobile_number' => $this->mobile_number,
                 'customer_number' => $customerNumber,
                 'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,

@@ -152,7 +152,7 @@
                                     @enderror
                                 </div>
                             </div>
-
+                            <div class="grid grid-cols-2 gap-4">
                             <!-- Status -->
                             <div>
                                 <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-400">
@@ -166,6 +166,18 @@
                                 @error('status')
                                     <p class="text-xs text-error-500 mt-1">{{ $message }}</p>
                                 @enderror
+                            </div>
+                            <!-- PO Required -->
+                            <div>
+                                <label class="flex items-center cursor-pointer mt-8">
+                                    <input type="checkbox" wire:model="po_required"
+                                        class="form-checkbox h-4 w-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500 dark:bg-gray-700 dark:border-gray-600" />
+                                    <span class="ml-2 text-xs font-medium text-gray-700 dark:text-gray-400">PO Required</span>
+                                </label>
+                                @error('po_required')
+                                    <p class="text-xs text-error-500 mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
                             </div>
                         </div>
                     </div>

@@ -168,6 +168,31 @@ class InvoiceView extends Component
 
     public function viewPrintPreview()
     {
+        // Check PO Required validation before starting transaction
+        $invoice = Invoice::with('customer', 'order')->find($this->invoiceId);
+
+        if (!$invoice) {
+            session()->flash('error', 'Invoice not found!');
+            return;
+        }
+
+        if ($invoice->status === 'invoicing') {
+            $customer = $invoice->customer;
+
+            // Check if customer has PO required checked
+            if ($customer->po_required) {
+                // Refresh PO number from database in case it was updated
+                $invoice->order->refresh();
+                // Get the current PO number from the component property (latest user input) or from the order
+                $poNumber = trim($this->customer_po_number ?? $invoice->order->customer_po_number ?? '');
+
+                // Check if PO number is empty
+                if (empty($poNumber)) {
+                    session()->flash('error', 'Please fill PO number and Generate invoice');
+                    return;
+                }
+            }
+        }
 
         DB::beginTransaction();
         try {
