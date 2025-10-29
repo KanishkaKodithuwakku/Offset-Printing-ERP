@@ -120,12 +120,11 @@ class CustomerCreate extends Component
             // Store original customer type for validation
             if ($customer->is_credit_customer) {
                 $this->original_customer_type = 'credit';
+                $this->customer_type = 'credit'; // Set based on actual customer type
             } else {
                 $this->original_customer_type = 'cash';
+                $this->customer_type = 'cash'; // Set based on actual customer type
             }
-
-            // Always default to credit customer in edit mode
-            $this->customer_type = 'credit';
 
             // Load outstanding balance if the original was a credit customer
             if ($customer->is_credit_customer) {
