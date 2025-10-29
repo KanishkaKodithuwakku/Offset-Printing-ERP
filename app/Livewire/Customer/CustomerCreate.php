@@ -147,7 +147,42 @@ class CustomerCreate extends Component
             }
         }
 
-        //$this->validate();
+        // If customer type is credit, validate credit limit fields
+        if ($this->customer_type === 'credit') {
+            $this->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'nullable|email',
+                'phone' => 'nullable|string|max:15',
+                'address' => 'nullable|string',
+                'city' => 'nullable|string',
+                'country' => 'nullable|string',
+                'mobile_number' => 'nullable|string|max:15',
+                'credit_limit_1_days' => 'required|integer|min:1',
+                'credit_limit_1_amount' => 'required|numeric|gt:0',
+                'credit_limit_2_days' => 'required|integer|min:1',
+                'credit_limit_2_amount' => 'required|numeric|gt:0',
+            ], [
+                'credit_limit_1_days.required' => 'Credit Limit 1 Days is required for credit customers.',
+                'credit_limit_1_days.min' => 'Credit Limit 1 Days must be at least 1 day.',
+                'credit_limit_1_amount.required' => 'Credit Limit 1 Amount is required for credit customers.',
+                'credit_limit_1_amount.gt' => 'Credit Limit 1 Amount must be greater than 0.00.',
+                'credit_limit_2_days.required' => 'Credit Limit 2 Days is required for credit customers.',
+                'credit_limit_2_days.min' => 'Credit Limit 2 Days must be at least 1 day.',
+                'credit_limit_2_amount.required' => 'Credit Limit 2 Amount is required for credit customers.',
+                'credit_limit_2_amount.gt' => 'Credit Limit 2 Amount must be greater than 0.00.',
+            ]);
+        } else {
+            // For cash customers, validate only basic fields
+            $this->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'nullable|email',
+                'phone' => 'nullable|string|max:15',
+                'address' => 'nullable|string',
+                'city' => 'nullable|string',
+                'country' => 'nullable|string',
+                'mobile_number' => 'nullable|string|max:15',
+            ]);
+        }
 
         if ($this->customer) {
             # Update existing customer
@@ -171,7 +206,7 @@ class CustomerCreate extends Component
 
             session()->flash('success', 'Customer has been updated successfully!');
         } else {
-            $this->validate();
+            // Validation already done above based on customer type
 
             # Create a new customer with generated customer_number
             $customerNumber = CustomerNumberGenerator::generate($this->authUser->branch_id);
