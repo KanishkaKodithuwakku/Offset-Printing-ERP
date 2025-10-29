@@ -8,7 +8,7 @@
         <h1 class="text-lg font-semibold text-gray-800 dark:text-white/90">Used Plates Items Listing</h1>
         <div class="p-4 bg-white rounded shadow">
             <!-- Filters Section -->
-            <div class="flex gap-4 pb-4">
+            <div class="flex gap-4 pb-4 no-print">
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700">Plate Name</label>
                     <select wire:model.live="selectedItemId"
@@ -43,6 +43,24 @@
                         </svg>
                     </span>
                 </div>
+                <div class="flex items-center mt-6">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" wire:model.live="showAll"
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700">
+                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Show All (Print)</span>
+                    </label>
+                </div>
+                 <div class="flex items-end">
+                     <button onclick="printReport()"
+                         class="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-brand-500 dark:hover:bg-brand-600">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                             <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                             <rect x="6" y="14" width="12" height="8"></rect>
+                         </svg>
+                         Print Report
+                     </button>
+                 </div>
             </div>
 
             <!-- Table Section -->
@@ -82,15 +100,17 @@
                             <tr class="bg-gray-100">
                                 <td colspan="4" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
                                 <td class="px-3 py-2 text-xs font-semibold text-left">{{ number_format($totalUsed) }}</td>
-                                <td colspan="2"></td>
+                                
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
-            <div class="flex justify-end mt-4">
-                {{ $usedPlates->links('vendor.pagination.custom-tailwind') }}
-            </div>
+            @if (!$showAll)
+                <div class="flex justify-end mt-4">
+                    {{ $usedPlates->links('vendor.pagination.custom-tailwind') }}
+                </div>
+            @endif
         </div>
     </div>
 
@@ -106,7 +126,7 @@
                 margin: 10mm;
             }
 
-            button, a {
+            button, a, .no-print {
                 display: none !important;
             }
 
@@ -152,7 +172,156 @@
             h3 {
                 font-size: 12px !important;
             }
-        }
-    </style>
-</div>
+         }
+     </style>
+
+     <script>
+         function printReport() {
+             // Get the print section
+             const printContent = document.getElementById('print-section').cloneNode(true);
+             const originalContent = document.body.innerHTML;
+
+             // Create a new window for printing
+             const printWindow = window.open('', '_blank');
+
+             // Get the report details
+             const reportTitle = 'Used Plates Report';
+             const startDate = '{{ $startDate }}';
+             const endDate = '{{ $endDate }}';
+             const companyName = '{{ config("app.company_name") }}';
+
+             // Write the HTML content
+             printWindow.document.write(`
+                 <!DOCTYPE html>
+                 <html>
+                 <head>
+                     <title>${reportTitle}</title>
+                     <style>
+                         @page {
+                             size: auto;
+                             margin: 10mm;
+                         }
+
+                         body {
+                             margin: 0;
+                             padding: 20px;
+                             font-family: 'Arial', sans-serif;
+                             font-size: 10pt;
+                             color: #000;
+                         }
+
+                         .header {
+                             text-align: center;
+                             margin-bottom: 20px;
+                         }
+
+                         .header h2 {
+                             font-size: 18px;
+                             font-weight: bold;
+                             margin: 5px 0;
+                         }
+
+                         .header h3 {
+                             font-size: 14px;
+                             font-weight: bold;
+                             margin: 5px 0;
+                         }
+
+                         .header .date-range {
+                             font-size: 11px;
+                             margin-top: 10px;
+                         }
+
+                         table {
+                             width: 100%;
+                             border-collapse: collapse;
+                             font-size: 9pt;
+                             margin-top: 10px;
+                         }
+
+                         thead {
+                             background-color: #f3f4f6;
+                         }
+
+                         th, td {
+                             border: 1px solid #ddd;
+                             padding: 6px 8px;
+                             text-align: left;
+                         }
+
+                         th {
+                             font-weight: bold;
+                             font-size: 8pt;
+                         }
+
+                         tfoot tr {
+                             background-color: #f3f4f6;
+                             font-weight: bold;
+                         }
+
+                         tfoot td {
+                             padding: 6px 8px;
+                         }
+
+                         .text-center {
+                             text-align: center;
+                         }
+
+                         .text-right {
+                             text-align: right;
+                         }
+
+                         @media print {
+                             body {
+                                 padding: 10px;
+                             }
+                             table {
+                                 page-break-inside: auto;
+                             }
+                             tr {
+                                 page-break-inside: avoid;
+                                 page-break-after: auto;
+                             }
+                             thead {
+                                 display: table-header-group;
+                             }
+                             tfoot {
+                                 display: table-footer-group;
+                             }
+                         }
+                     </style>
+                 </head>
+                 <body>
+                     <div class="header">
+                         <h2>${companyName}</h2>
+                         <h3>${reportTitle}</h3>
+                         <div class="date-range">
+                             <strong>From:</strong> ${startDate} <strong>To:</strong> ${endDate}
+                         </div>
+                     </div>
+                     ${printContent.innerHTML}
+                 </body>
+                 </html>
+             `);
+
+             printWindow.document.close();
+
+             // Wait for content to load, then print
+             printWindow.onload = function() {
+                 setTimeout(function() {
+                     printWindow.print();
+                     printWindow.close();
+                 }, 250);
+             };
+         }
+
+         // Support keyboard shortcut Ctrl+P or Cmd+P
+         document.addEventListener('keydown', function(event) {
+             if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+                 event.preventDefault();
+                 printReport();
+             }
+         });
+     </script>
+ </div>
 

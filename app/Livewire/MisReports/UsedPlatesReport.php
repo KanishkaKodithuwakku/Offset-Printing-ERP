@@ -18,6 +18,7 @@ class UsedPlatesReport extends Component
     public $perPage = 25;
     public $selectedItemId = null;
     public $authUser;
+    public $showAll = false;
 
     public function mount()
     {
@@ -37,6 +38,11 @@ class UsedPlatesReport extends Component
     }
 
     public function updatedSelectedItemId()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedShowAll()
     {
         $this->resetPage();
     }
@@ -87,7 +93,17 @@ class UsedPlatesReport extends Component
         // Order by date descending (most recent first)
         $query->orderBy('di.created_at', 'desc');
 
-        $usedPlates = $query->paginate($this->perPage);
+        // If showAll is true, get all records without pagination, otherwise paginate
+        if ($this->showAll) {
+            $usedPlates = new \Illuminate\Pagination\LengthAwarePaginator(
+                $query->get(),
+                $query->count(),
+                $query->count(),
+                1
+            );
+        } else {
+            $usedPlates = $query->paginate($this->perPage);
+        }
 
         // Get all plates that have been dispatched (from dispatch_items)
         // This shows only plates that have actually been used
