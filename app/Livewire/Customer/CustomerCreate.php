@@ -3,6 +3,7 @@
 namespace App\Livewire\Customer;
 
 use App\Models\Customer;
+use App\Models\Invoice;
 use Livewire\Component;
 use Livewire\Attributes\Validate;
 use Livewire\Attributes\Title;
@@ -36,6 +37,9 @@ class CustomerCreate extends Component
     #[Validate('nullable|in:active,inactive', message: 'Invalid status')]
     public $status = 'active';
 
+    #[Validate('nullable|boolean', message: 'PO required must be a boolean')]
+    public $po_required = false;
+
     #[Validate('nullable|string|max:15', message: 'Mobile number must not exceed 15 characters')]
     public $mobile_number;
 
@@ -52,6 +56,50 @@ class CustomerCreate extends Component
     #[Validate('nullable|numeric|min:0', message: 'Credit amount must be a positive number')]
     public $credit_limit_2_amount;
 
+    public $customer_type = 'credit'; // Default to credit customer
+    public $outstanding_balance = 0;
+    public $original_customer_type = null; // Store original customer type
+    public $current_outstanding = 0; // Current outstanding balance to display
+
+    public function updatedCustomerType($value)
+    {
+        // Check if trying to change from credit to cash customer in edit mode
+        if ($this->customer && $this->original_customer_type === 'credit' && $value === 'cash') {
+            $outstanding = Invoice::where('customer_id', $this->customer->id)
+                ->where('amount_due', '>', 0)
+                ->sum('amount_due');
+
+            if ($outstanding > 0) {
+                $this->customer_type = 'credit'; // Revert to credit
+                $this->outstanding_balance = $outstanding;
+                session()->flash('error', "Customer have {$outstanding} outstanding balance. Please clear balance and select as cash customer.");
+            }
+        }
+
+        // Load outstanding balance when selecting credit customer
+        if ($value === 'credit' && $this->customer) {
+            $this->loadOutstandingBalance();
+        } else {
+            $this->current_outstanding = 0;
+        }
+    }
+
+    public function loadOutstandingBalance()
+    {
+        if ($this->customer) {
+            $this->current_outstanding = Invoice::where('customer_id', $this->customer->id)
+                ->where('amount_due', '>', 0)
+                ->sum('amount_due');
+        }
+    }
+
+    public function checkOutstandingBalanceWhenTabActive()
+    {
+        // This method is called when user switches to Credit Limit & Period tab
+        // It checks if customer has outstanding balance and updates the UI accordingly
+        $this->loadOutstandingBalance();
+    }
+
     public function mount(Customer $customer)
     {
         $this->authUser = auth()->user();
@@ -66,17 +114,79 @@ class CustomerCreate extends Component
             $this->city = $customer->city;
             $this->country = $customer->country;
             $this->status = $customer->status;
+            $this->po_required = $customer->po_required ?? false;
             $this->mobile_number = $customer->mobile_number;
             $this->credit_limit_1_days = $customer->credit_limit_1_days;
             $this->credit_limit_1_amount = $customer->credit_limit_1_amount;
             $this->credit_limit_2_days = $customer->credit_limit_2_days;
             $this->credit_limit_2_amount = $customer->credit_limit_2_amount;
+
+            // Store original customer type for validation
+            if ($customer->is_credit_customer) {
+                $this->original_customer_type = 'credit';
+                $this->customer_type = 'credit'; // Set based on actual customer type
+            } else {
+                $this->original_customer_type = 'cash';
+                $this->customer_type = 'cash'; // Set based on actual customer type
+            }
+
+            // Load outstanding balance if the original was a credit customer
+            if ($customer->is_credit_customer) {
+                $this->loadOutstandingBalance();
+            }
         }
     }
 
     public function saveCustomer()
     {
-        //$this->validate();
+        // Check if trying to change from credit to cash customer with outstanding balance
+        if ($this->customer && $this->original_customer_type === 'credit' && $this->customer_type === 'cash') {
+            $outstanding = Invoice::where('customer_id', $this->customer->id)
+                ->where('amount_due', '>', 0)
+                ->sum('amount_due');
+
+            if ($outstanding > 0) {
+                session()->flash('error', "Customer have {$outstanding} outstanding balance. Please clear balance and select as cash customer.");
+                return;
+            }
+        }
+
+        // If customer type is credit, validate credit limit fields
+        if ($this->customer_type === 'credit') {
+            $this->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'nullable|email',
+                'phone' => 'nullable|string|max:15',
+                'address' => 'nullable|string',
+                'city' => 'nullable|string',
+                'country' => 'nullable|string',
+                'mobile_number' => 'nullable|string|max:15',
+                'credit_limit_1_days' => 'required|integer|min:1',
+                'credit_limit_1_amount' => 'required|numeric|gt:0',
+                'credit_limit_2_days' => 'required|integer|min:1',
+                'credit_limit_2_amount' => 'required|numeric|gt:0',
+            ], [
+                'credit_limit_1_days.required' => 'Credit Limit 1 Days is required for credit customers.',
+                'credit_limit_1_days.min' => 'Credit Limit 1 Days must be at least 1 day.',
+                'credit_limit_1_amount.required' => 'Credit Limit 1 Amount is required for credit customers.',
+                'credit_limit_1_amount.gt' => 'Credit Limit 1 Amount must be greater than 0.00.',
+                'credit_limit_2_days.required' => 'Credit Limit 2 Days is required for credit customers.',
+                'credit_limit_2_days.min' => 'Credit Limit 2 Days must be at least 1 day.',
+                'credit_limit_2_amount.required' => 'Credit Limit 2 Amount is required for credit customers.',
+                'credit_limit_2_amount.gt' => 'Credit Limit 2 Amount must be greater than 0.00.',
+            ]);
+        } else {
+            // For cash customers, validate only basic fields
+            $this->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'nullable|email',
+                'phone' => 'nullable|string|max:15',
+                'address' => 'nullable|string',
+                'city' => 'nullable|string',
+                'country' => 'nullable|string',
+                'mobile_number' => 'nullable|string|max:15',
+            ]);
+        }
 
         if ($this->customer) {
             # Update existing customer
@@ -89,16 +199,19 @@ class CustomerCreate extends Component
                 'city' => $this->city,
                 'country' => $this->country,
                 'status' => $this->status,
+                'po_required' => $this->po_required ?? false,
                 'mobile_number' => $this->mobile_number,
-                'credit_limit_1_days' => $this->credit_limit_1_days,
-                'credit_limit_1_amount' => $this->credit_limit_1_amount,
-                'credit_limit_2_days' => $this->credit_limit_2_days,
-                'credit_limit_2_amount' => $this->credit_limit_2_amount,
+                'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,
+                'credit_limit_1_amount' => $this->customer_type === 'credit' ? $this->credit_limit_1_amount : null,
+                'credit_limit_2_days' => $this->customer_type === 'credit' ? $this->credit_limit_2_days : null,
+                'credit_limit_2_amount' => $this->customer_type === 'credit' ? $this->credit_limit_2_amount : null,
+                'is_credit_customer' => $this->customer_type === 'credit',
+                'is_cash_customer' => $this->customer_type === 'cash',
             ]);
 
             session()->flash('success', 'Customer has been updated successfully!');
         } else {
-            $this->validate();
+            // Validation already done above based on customer type
 
             # Create a new customer with generated customer_number
             $customerNumber = CustomerNumberGenerator::generate($this->authUser->branch_id);
@@ -111,12 +224,15 @@ class CustomerCreate extends Component
                 'city' => $this->city,
                 'country' => $this->country,
                 'status' => $this->status,
+                'po_required' => $this->po_required ?? false,
                 'mobile_number' => $this->mobile_number,
                 'customer_number' => $customerNumber,
-                'credit_limit_1_days' => $this->credit_limit_1_days,
-                'credit_limit_1_amount' => $this->credit_limit_1_amount,
-                'credit_limit_2_days' => $this->credit_limit_2_days,
-                'credit_limit_2_amount' => $this->credit_limit_2_amount,
+                'credit_limit_1_days' => $this->customer_type === 'credit' ? $this->credit_limit_1_days : null,
+                'credit_limit_1_amount' => $this->customer_type === 'credit' ? $this->credit_limit_1_amount : null,
+                'credit_limit_2_days' => $this->customer_type === 'credit' ? $this->credit_limit_2_days : null,
+                'credit_limit_2_amount' => $this->customer_type === 'credit' ? $this->credit_limit_2_amount : null,
+                'is_credit_customer' => $this->customer_type === 'credit',
+                'is_cash_customer' => $this->customer_type === 'cash',
             ]);
 
             session()->flash('success', 'Customer has been created successfully!');

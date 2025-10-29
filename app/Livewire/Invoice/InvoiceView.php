@@ -66,8 +66,10 @@ class InvoiceView extends Component
 
         $this->backedQty = $this->invoice->order->backing_qty;
         $this->isPlateBacking = $this->invoice->order->plate_backing;
-        $this->backedTotal = $this->backedPrice * $this->backedQty;
-        $this->backedPrice = number_format($this->invoice->backed_plates_price, 2, '.', '');
+
+        // Store backedPrice as numeric value for calculations
+        $this->backedPrice = (float) $this->invoice->backed_plates_price ?? 0.0;
+        $this->backedTotal = $this->backedPrice * (float) $this->backedQty;
 
         // Combine regular items and expenses
         $this->invoiceItems = [];
@@ -78,9 +80,9 @@ class InvoiceView extends Component
                 'id' => $invoiceItem->id,
                 'item_id' => $invoiceItem->item_id,
                 'name' => $invoiceItem->item->item_name,
-                'unit_price' => $invoiceItem->unit_price,
-                'quantity' => $invoiceItem->quantity,
-                'total_price' => $invoiceItem->total_price
+                'unit_price' => (float) ($invoiceItem->unit_price ?? 0),
+                'quantity' => (int) ($invoiceItem->quantity ?? 1),
+                'total_price' => (float) ($invoiceItem->total_price ?? 0)
             ];
         }
 
@@ -90,9 +92,9 @@ class InvoiceView extends Component
                 'id' => $expenseItem->id,
                 'expense_id' => $expenseItem->expense_id,
                 'name' => $expenseItem->expense->expense_name,
-                'unit_price' => $expenseItem->expense_price,
-                'quantity' => $expenseItem->quantity,
-                'total_price' => $expenseItem->total_price,
+                'unit_price' => (float) ($expenseItem->expense_price ?? 0),
+                'quantity' => (int) ($expenseItem->quantity ?? 1),
+                'total_price' => (float) ($expenseItem->total_price ?? 0),
                 'is_other_expense' => true
             ];
         }
@@ -166,6 +168,31 @@ class InvoiceView extends Component
 
     public function viewPrintPreview()
     {
+        // Check PO Required validation before starting transaction
+        $invoice = Invoice::with('customer', 'order')->find($this->invoiceId);
+
+        if (!$invoice) {
+            session()->flash('error', 'Invoice not found!');
+            return;
+        }
+
+        if ($invoice->status === 'invoicing') {
+            $customer = $invoice->customer;
+
+            // Check if customer has PO required checked
+            if ($customer->po_required) {
+                // Refresh PO number from database in case it was updated
+                $invoice->order->refresh();
+                // Get the current PO number from the component property (latest user input) or from the order
+                $poNumber = trim($this->customer_po_number ?? $invoice->order->customer_po_number ?? '');
+
+                // Check if PO number is empty
+                if (empty($poNumber)) {
+                    session()->flash('error', 'Please fill PO number and Generate invoice');
+                    return;
+                }
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -181,6 +208,21 @@ class InvoiceView extends Component
 
                 // Credit Limit Validation
                 $customer = $invoice->customer;
+
+                // Check if customer is cash customer and has outstanding balance
+                if ($customer->is_cash_customer) {
+                    $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                        ->where('status', '!=', 'cancelled')
+                        ->where('amount_due', '>', 0)
+                        ->where('id', '!=', $invoice->id) // Exclude current invoice
+                        ->sum('amount_due');
+
+                    if ($currentOutstanding > 0) {
+                        session()->flash('error', "Can't create invoice. This customer have " . number_format($currentOutstanding, 2) . " outstanding balance. Please clear and generate invoice.");
+                        DB::rollBack();
+                        return;
+                    }
+                }
 
                 // Calculate customer's current outstanding balance (excluding this invoice)
                 $currentOutstanding = Invoice::where('customer_id', $customer->id)
@@ -459,9 +501,13 @@ class InvoiceView extends Component
 
     public function updateUnitPrice($index)
     {
-        $this->invoiceItems[$index]['total_price']
-            = $this->invoiceItems[$index]['quantity']
-            * $this->invoiceItems[$index]['unit_price'];
+        // Get unit_price and default to 0 if blank or null, then cast to float
+        $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+        $quantity = (float) ($this->invoiceItems[$index]['quantity'] ?? 1);
+
+        // Store back as float to ensure type consistency
+        $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+        $this->invoiceItems[$index]['total_price'] = $quantity * $unitPrice;
 
         $this->calculateTotal();
         $this->checkForChanges();
@@ -469,14 +515,21 @@ class InvoiceView extends Component
 
     public function calculateTotal()
     {
-        // 1) figure out the baked‐plates total from whatever the user last typed
-        $this->backedTotal = $this->backedPrice * $this->backedQty;
+        // 1) figure out the baked‐plates total from whatever the user last typed (cast to float)
+        $this->backedTotal = (float) $this->backedPrice * (float) $this->backedQty;
 
         // 2) line‐item totals
         $lineSum = array_sum(array_column($this->invoiceItems, 'total_price'));
 
-        // 3) grand total = lines + baked‐plates
-        $this->total_amount = number_format($lineSum + $this->backedTotal, 2, '.', '');
+        // Ensure lineSum is numeric
+        $lineSum = is_numeric($lineSum) ? (float) $lineSum : 0.0;
+
+        // Ensure backedTotal is numeric
+        $this->backedTotal = is_numeric($this->backedTotal) ? (float) $this->backedTotal : 0.0;
+
+        // 3) grand total = lines + baked‐plates (store as numeric value for database)
+        $total = $lineSum + $this->backedTotal;
+        $this->total_amount = round($total, 2);
 
         // Don't automatically mark as changed - let checkForChanges handle this
     }
@@ -505,16 +558,26 @@ class InvoiceView extends Component
             // 1) Update each existing invoice-item line
             foreach ($this->invoiceItems as $item) {
                 if (isset($item['id']) && $item['id']) {
-                    // Update existing invoice item
-                    InvoiceItem::where('id', $item['id'])->update([
-                        'unit_price' => $item['unit_price'],
-                        'total_price' => $item['total_price'],
-                    ]);
-                    $regularItemsProcessed++;
-                 } elseif (isset($item['is_other_expense']) && $item['is_other_expense']) {
-                     // Other expenses are now handled immediately when added/updated/removed
-                     // So we just skip them here since they're already in the database
-                     $otherExpensesProcessed++;
+                    // Validate that unit_price is not null or empty
+                    if (!isset($item['unit_price']) || $item['unit_price'] === null || $item['unit_price'] === '') {
+                        continue; // Skip items with blank unit price
+                    }
+
+                    if (isset($item['is_other_expense']) && $item['is_other_expense']) {
+                        // Update existing other expense item
+                        ExpensesItem::where('id', $item['id'])->update([
+                            'expense_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'] ?? 0,
+                        ]);
+                        $otherExpensesProcessed++;
+                    } else {
+                        // Update existing regular invoice item
+                        InvoiceItem::where('id', $item['id'])->update([
+                            'unit_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'] ?? 0,
+                        ]);
+                        $regularItemsProcessed++;
+                    }
                  }
             }
 
@@ -549,17 +612,28 @@ class InvoiceView extends Component
 
     public function updatedTotalAmount($value)
     {
-
-        $this->total_amount = number_format($value, 2, '.', '') + $this->backedPrice;
+        // Ensure value is numeric before calculating
+        $numValue = is_numeric($value) ? (float) $value : 0.0;
+        $this->total_amount = round($numValue + (float) $this->backedPrice, 2);
     }
 
     public function updateBackedPrice()
     {
-        // 1) strip commas and cast to float
-        $clean = (float) str_replace(',', '', $this->backedPrice);
+        // 1) strip commas and cast to float, handle empty/null values
+        if (empty($this->backedPrice)) {
+            $clean = 0.0;
+        } else {
+            $cleaned = str_replace(',', '', (string) $this->backedPrice);
+            $clean = (float) $cleaned;
 
-        // 2) re-format with exactly two decimal places
-        $this->backedPrice = number_format($clean, 2, '.', '');
+            // If not a valid number, default to 0
+            if (!is_numeric($clean) || is_nan($clean)) {
+                $clean = 0.0;
+            }
+        }
+
+        // 2) Store as numeric value (not formatted), rounding to 2 decimal places
+        $this->backedPrice = round($clean, 2);
 
         // 3) re-calculate grand total
         $this->calculateTotal();
@@ -634,15 +708,15 @@ class InvoiceView extends Component
                             'total_price' => $expense->price,
                         ]);
 
-                        // Add to Livewire component array
+                        // Add to Livewire component array (cast to proper types)
                         $newItem = [
                             'id' => $expenseItem->id,
                             'item_id' => null,
                             'expense_id' => $expense->id,
                             'name' => $expense->expense_name,
-                            'unit_price' => $expense->price,
+                            'unit_price' => (float) ($expense->price ?? 0),
                             'quantity' => 1,
-                            'total_price' => $expense->price,
+                            'total_price' => (float) ($expense->price ?? 0),
                             'is_other_expense' => true
                         ];
 
@@ -719,8 +793,13 @@ class InvoiceView extends Component
                 $this->invoiceItems[$index]['quantity'] = $quantity;
             }
 
-            // Update total price based on unit price and quantity
-            $this->invoiceItems[$index]['total_price'] = $this->invoiceItems[$index]['unit_price'] * $quantity;
+            // Update total price based on unit price and quantity (cast to float)
+            $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+
+            // Store back as proper types to ensure consistency
+            $this->invoiceItems[$index]['quantity'] = $quantity;
+            $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+            $this->invoiceItems[$index]['total_price'] = $unitPrice * (float) $quantity;
 
             $this->calculateTotal();
             $this->changesMade = true;
@@ -743,9 +822,13 @@ class InvoiceView extends Component
             // Find the item by expense ID and update it
             foreach ($this->invoiceItems as $index => $item) {
                 if (isset($item['expense_id']) && $item['expense_id'] == $expenseId && isset($item['is_other_expense'])) {
-                    // Update the quantity and total price in the array
+                    // Update the quantity and total price in the array (cast to float)
+                    $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+
+                    // Store back as proper types
                     $this->invoiceItems[$index]['quantity'] = $quantity;
-                    $this->invoiceItems[$index]['total_price'] = $this->invoiceItems[$index]['unit_price'] * $quantity;
+                    $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+                    $this->invoiceItems[$index]['total_price'] = $unitPrice * (float) $quantity;
 
                     // Update in database if the item has an ID (meaning it's saved)
                     if (isset($item['id']) && $item['id']) {

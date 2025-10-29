@@ -148,6 +148,8 @@ class JobOrderList extends Component
                     ->orWhere('job_number', 'like', "%{$term}%")
                     // <-- NEW: match on the primary key as well
                     ->orWhere('id', $term)
+                    // Search by description
+                    ->orWhere('description', 'like', "%{$term}%")
                     ->orWhereHas('customer', function ($q) use ($term) {
                         $q->where('name', 'like', "{$term}%");
                     })

@@ -9,8 +9,9 @@ class Customer extends Model
 {
     use SoftDeletes;
     protected $fillable = [
-        'name', 'branch_id','ledger_id','email', 'phone', 'mobile_number', 'address', 'city', 'country', 'status',
+        'name', 'branch_id','ledger_id','email', 'phone', 'mobile_number', 'address', 'city', 'country', 'status', 'po_required',
         'customer_number', 'credit_limit_1_days', 'credit_limit_1_amount', 'credit_limit_2_days', 'credit_limit_2_amount',
+        'is_credit_customer', 'is_cash_customer',
     ];
 
     public function branch()

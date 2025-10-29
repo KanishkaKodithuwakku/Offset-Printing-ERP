@@ -735,8 +735,8 @@
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        <input type="number" wire:model="jobOrderItems.{{ $index }}.quantity"
-                                            wire:change="updateTotal({{ $index }})"
+                                        <input type="number" wire:model.lazy="jobOrderItems.{{ $index }}.quantity"
+                                            wire:blur="updateTotal({{ $index }})"
                                             min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}"
                                             class="w-16 border p-1 text-center">
                                     </p>

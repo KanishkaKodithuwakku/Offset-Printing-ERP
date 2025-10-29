@@ -303,9 +303,9 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                             <input type="text" wire:model.live="invoiceItems.{{ $index }}.unit_price"
                                                 wire:change="updateUnitPrice({{ $index }})" min="0" max=""
                                                 class="w-24 border p-1 text-right text-xs"
-                                                value="{{ number_format($invoiceItem['unit_price'], 2) }}" style="">
+                                                value="{{ number_format((float)($invoiceItem['unit_price'] ?? 0), 2) }}" style="">
                                             @else
-                                            {{ number_format($invoiceItem['unit_price'], 2) }}
+                                            {{ number_format((float)($invoiceItem['unit_price'] ?? 0), 2) }}
                                             @endif
                                         </p>
                                     </td>
@@ -325,7 +325,7 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                     </td>
                                     <td class="px-6 py-3">
                                         <p class="text-gray-500 text-theme-sm dark:text-gray-400">
-                                            {{ number_format($invoiceItem['total_price'], 2) }}
+                                            {{ number_format((float)($invoiceItem['total_price'] ?? 0), 2) }}
                                         </p>
                                     </td>
                                     @if ($status === 'invoicing')
@@ -358,11 +358,11 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                     <td class="px-6 py-3">
                                         <p class="text-gray-500 text-theme-sm dark:text-gray-400">
                                             @if ($status === 'invoicing')
-                                            <input type="text" wire:model.live="backedPrice"
-                                                wire:input="updateBackedPrice()" min="0" max=""
+                                            <input type="text" wire:model.blur="backedPrice"
+                                                wire:blur="updateBackedPrice()" min="1"
                                                 class="w-24 border p-1 text-right text-xs" style="">
                                             @else
-                                            {{ number_format($backedPrice, 2) }}
+                                            {{ number_format((float)($backedPrice ?? 0), 2) }}
                                             @endif
                                         </p>
                                     </td>
@@ -375,7 +375,7 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                                     </td>
                                     <td class="px-6 py-3">
                                         <p class="text-gray-500 text-theme-sm dark:text-gray-400">
-                                            {{ number_format($backedTotal, 2) }}
+                                            {{ number_format((float)($backedTotal ?? 0), 2) }}
                                         </p>
                                     </td>
                                     @if ($status === 'invoicing')
@@ -394,11 +394,11 @@ bg-brand-500 hover:bg-brand-600 text-white">Save
                     <div class="pb-6 my-6 text-right border-b border-gray-100 dark:border-gray-800">
                         <p class="text-lg font-semibold text-gray-800 dark:text-white/90">
                             Total : @if ($status === 'invoicing')
-                            <input wire:model.defer="total_amount" value="{{ number_format($total_amount, 2) }}"
+                            <input wire:model.defer="total_amount" value="{{ number_format((float)($total_amount ?? 0), 2) }}"
                                 type="text"
                                 class="text-right dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-18 w-24 border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
                             @else
-                            {{ number_format($total_amount, 2) }}
+                            {{ number_format((float)($total_amount ?? 0), 2) }}
                             @endif
                         </p>
                     </div>

@@ -25,7 +25,7 @@
             @if (auth()->user()->mode === 'admin')
             @include('livewire.menu.dashboard.index')
             @endif
-           
+
             @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing'|| auth()->user()->mode === 'accounts')
             @include('livewire.menu.admin.index')
             @endif
@@ -33,19 +33,19 @@
             @if (auth()->user()->mode === 'dispatch' || auth()->user()->mode === 'design')
             @include('livewire.menu.inventory-ctp.index')
             @endif
-           
+
 
             @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing'|| auth()->user()->mode === 'accounts')
             @include('livewire.menu.inventory.index')
             @endif
 
-            
+
             @include('livewire.menu.sales.index')
 
             @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing' || auth()->user()->mode === 'accounts')
             @include('livewire.menu.finance.index')
             @endif
-           
+
             @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing' || auth()->user()->mode === 'accounts')
             @include('livewire.menu.mis_reports.index')
             @endif
@@ -56,6 +56,10 @@
 
             @if (auth()->user()->mode === 'admin')
             @include('livewire.menu.settings.index')
+            @endif
+
+            @if (auth()->user()->mode === 'admin')
+            @include('livewire.menu.administration.index')
             @endif
 
         </nav>

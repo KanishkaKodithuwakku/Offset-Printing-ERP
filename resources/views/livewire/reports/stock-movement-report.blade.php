@@ -183,7 +183,7 @@
                         </th>
                         <th scope="col"
                             class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
-                            Job Order Number
+                            GRN/Job Order Number
                         </th>
                         <th scope="col"
                             class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
@@ -258,18 +258,16 @@
         <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-300">
             @if ($paginationEnabled)
             <div class="text-sm text-gray-600 dark:text-gray-400">
-                Showing {{ $movements->firstItem() }} to {{ $movements->lastItem() }} of
-                {{ $movements->total() }} entries
+                Showing {{ $movements->firstItem() ?? 0 }} to {{ $movements->lastItem() ?? 0 }} of
+                {{ $movements->total() ?? 0 }} entries
             </div>
             @endif
 
-            <div class="pagination flex justify-between">
-                @if ($paginationEnabled)
-                <div class="pagination flex justify-between">
-                    {{ $movements->links('vendor.pagination.custom-tailwind') }}
-                </div>
-                @endif
+            @if ($paginationEnabled && $movements->hasPages())
+            <div class="mt-4">
+                {{ $movements->links('vendor.pagination.custom-tailwind') }}
             </div>
+            @endif
         </div>
 
 

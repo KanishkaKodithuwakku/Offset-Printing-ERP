@@ -94,6 +94,77 @@ class JobOrderView extends Component
         return $data;
     }
 
+    /**
+     * Check if all items in the job order are fully dispatched
+     * and update status from 'dispatching' to 'dispatched' if applicable
+     */
+    public function checkAndUpdateDispatchStatus($jobOrderId)
+    {
+        try {
+            // Get all job order items for this order
+            $jobOrderItems = JobOrderItem::where('order_id', $jobOrderId)->get();
+
+            if ($jobOrderItems->isEmpty()) {
+                return false;
+            }
+
+            $allItemsFullyDispatched = true;
+
+            foreach ($jobOrderItems as $jobOrderItem) {
+                // Get total dispatched quantity for this item (including both pending and dispatched status)
+                $totalDispatchedQuantity = DB::table('dispatch_items')
+                    ->where('order_id', $jobOrderId)
+                    ->where('item_id', $jobOrderItem->item_id)
+                    ->sum('quantity');
+
+                // Check if total dispatched quantity equals job order item quantity
+                if ($totalDispatchedQuantity != $jobOrderItem->quantity) {
+                    $allItemsFullyDispatched = false;
+                    break;
+                }
+            }
+
+            // If all items are fully dispatched and current status is 'dispatching', update to 'dispatched'
+            if ($allItemsFullyDispatched) {
+                $jobOrder = JobOrder::find($jobOrderId);
+                if ($jobOrder && $jobOrder->status === 'dispatching') {
+                    // Update job order status
+                    $jobOrder->status = 'dispatched';
+                    $jobOrder->save();
+
+                    // Update the status of all job order items
+                    JobOrderItem::where('order_id', $jobOrderId)->update(['status' => 'dispatched']);
+
+                    // Update all dispatch_items status from 'pending' to 'dispatched' for this job order
+                    DB::table('dispatch_items')
+                        ->where('order_id', $jobOrderId)
+                        ->where('status', 'pending')
+                        ->update(['status' => 'dispatched']);
+
+                    Log::channel('job_order_log')->info('Job order status updated to dispatched', [
+                        'job_order_id' => $jobOrderId,
+                        'job_number' => $jobOrder->job_number,
+                        'previous_status' => 'dispatching',
+                        'new_status' => 'dispatched',
+                        'user_id' => $this->authUser->id,
+                        'user_mode' => $this->authUser->mode,
+                        'dispatch_items_updated' => 'pending to dispatched'
+                    ]);
+
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            Log::channel('job_order_log')->error('Error checking dispatch status: ' . $e->getMessage(), [
+                'job_order_id' => $jobOrderId,
+                'error_message' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
 
     public function updatedSearchTerm()
     {
@@ -381,7 +452,34 @@ class JobOrderView extends Component
 
     public function updateOrderItems()
     {
-        session()->flash('success', 'Job Order updated successfully!');
+        try {
+            // Loop through all order items and save them to the database
+            foreach ($this->orderItems as $orderItem) {
+                // Check if the quantity exceeds the available stock
+                if ($orderItem['quantity'] > $orderItem['stock_balance']) {
+                    session()->flash('error', 'Quantity cannot exceed available stock for item: ' . $orderItem['name']);
+                    return;
+                }
+
+                // Update the JobOrderItem in the database
+                $jobOrderItem = JobOrderItem::find($orderItem['id']);
+                if ($jobOrderItem) {
+                    $jobOrderItem->quantity = $orderItem['quantity'];
+                    $jobOrderItem->total = $orderItem['quantity'] * $jobOrderItem->price;
+                    $jobOrderItem->save();
+                }
+            }
+
+            // Recalculate the overall total for the job order
+            $this->calculateTotal();
+
+            // Reload the order details to reflect changes
+            $this->loadOrderDetails($this->jobOrderId);
+
+            session()->flash('success', 'Job Order updated successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update job order: ' . $e->getMessage());
+        }
     }
 
     public function releseOrder($jobOrderId)
@@ -465,6 +563,11 @@ class JobOrderView extends Component
             $jobOrder->backing_qty = $this->backing_qty;
             $jobOrder->plate_backing = $this->plate_backing;
             $jobOrder->save();
+
+            // Check and update dispatch status if admin is editing
+            if ($this->authUser->mode === 'admin') {
+                $this->checkAndUpdateDispatchStatus($this->jobOrderId);
+            }
 
             // Flash success message
             session()->flash('success', ucfirst(str_replace('_', ' ', $field)) . ' updated successfully!');
