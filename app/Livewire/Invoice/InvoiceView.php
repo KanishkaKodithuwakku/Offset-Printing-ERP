@@ -181,12 +181,13 @@ class InvoiceView extends Component
 
             // Check if customer has PO required checked
             if ($customer->po_required) {
-                // Refresh PO number from database in case it was updated
+                // Refresh order from database to get latest PO number
                 $invoice->order->refresh();
-                // Get the current PO number from the component property (latest user input) or from the order
-                $poNumber = trim($this->customer_po_number ?? $invoice->order->customer_po_number ?? '');
 
-                // Check if PO number is empty
+                // Check PO number from database only (not input box)
+                $poNumber = trim($invoice->order->customer_po_number ?? '');
+
+                // Check if PO number is empty in database
                 if (empty($poNumber)) {
                     session()->flash('error', 'Please fill PO number and Generate invoice');
                     return;
