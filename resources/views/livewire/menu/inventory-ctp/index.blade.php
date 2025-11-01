@@ -16,7 +16,7 @@
     <ul class="mb-1 flex flex-col gap-1">
 
         @if (auth()->user()->mode === 'dispatch' || auth()->user()->mode === 'design' || auth()->user()->mode === 'manager')
-        <!-- Menu Stock Summery -->
+        <!-- Menu Stock Summary -->
         <li>
             <a href="#" @click.prevent="selected = (selected === 'Items' ? '':'Items')" class="menu-item group" :class="(selected === 'Items') || (page === 'addItem' ||
                         page === 'itemList' || page === 'inactiveItems' || page === 'archivedItems') ?
@@ -32,7 +32,7 @@
                 </svg> --}}
 
                 <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
-                    Stock Summery
+                    Stock Summary
                 </span>
 
                 <svg class="menu-item-arrow absolute right-2.5 top-1/2 -translate-y-1/2 stroke-current" :class="[(selected === 'Items') ? 'menu-item-arrow-active' :
@@ -50,14 +50,14 @@
                     <li>
                         <a wire:navigate href="{{ route('stocks') }}" class="menu-dropdown-item group" :class="page === 'itemList' ? 'menu-dropdown-item-active' :
                                     'menu-dropdown-item-inactive'">
-                            Stock Summery
+                            Stock Summary
                         </a>
                     </li>
                 </ul>
             </div>
             <!-- Dropdown Menu End -->
         </li>
-        <!-- Menu Stock Summery -->
+        <!-- Menu Stock Summary -->
         @endif
 
     </ul>
