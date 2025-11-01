@@ -30,7 +30,7 @@
             @include('livewire.menu.admin.index')
             @endif
 
-            @if (auth()->user()->mode === 'dispatch' || auth()->user()->mode === 'design')
+            @if (auth()->user()->mode === 'dispatch' || auth()->user()->mode === 'design' || auth()->user()->mode === 'manager')
             @include('livewire.menu.inventory-ctp.index')
             @endif
 

@@ -15,7 +15,7 @@
 
     <ul class="mb-1 flex flex-col gap-1">
         <!-- Database Backup Menu -->
-        @if (auth()->user()->mode === 'admin')
+        @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing' || auth()->user()->mode === 'accounts')
         <li>
             <a wire:navigate href="{{ route('admin.database.backup') }}" class="menu-item group"
                 :class="page === 'DatabaseBackup' ? 'menu-item-active' : 'menu-item-inactive'">

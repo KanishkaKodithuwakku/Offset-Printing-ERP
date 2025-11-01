@@ -50,7 +50,7 @@
                         </a>
                     </li>
 
-
+                    @if (auth()->user()->mode === 'admin')
                       <li>
                         <a wire:navigate href="{{ route('stock-adjustments.index') }}" class="menu-dropdown-item group"
                             :class="page === 'StockAdjustmentApproval' ? 'menu-dropdown-item-active' :
@@ -63,7 +63,7 @@
                             </span>
                         </a>
                     </li>
-
+                    @endif
                 </ul>
             </div>
             <!-- Dropdown Menu End -->
