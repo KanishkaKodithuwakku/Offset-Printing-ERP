@@ -62,6 +62,7 @@ use App\Livewire\Stock\StockAdjustmentForm;
 use App\Livewire\Stock\StockAdjustmentList;
 use App\Livewire\Supplier\VendorBillCreate;
 use App\Livewire\Admin\DamagedItemApprovals;
+use App\Livewire\Admin\BillDeletionApprovals;
 use App\Livewire\Customer\CustomerOrderForm;
 use App\Livewire\Customer\CustomerOrderList;
 use App\Livewire\Reports\TrialBalanceReport;
@@ -201,6 +202,7 @@ Route::middleware([
     Route::get('/damaged-items/report', DamagedItemForm::class)->name('damaged-items.report');
     Route::get('/admin/damaged-items', DamagedItemApprovals::class)->name('admin.damaged-items');
     Route::get('/admin/damaged-list', DamagedItemList::class)->name('admin.damaged-list');
+    Route::get('/admin/bill-deletion-approvals', BillDeletionApprovals::class)->name('admin.bill-deletion-approvals');
 
     Route::get('/stock-adjustment', StockAdjustmentForm::class)->name('stock.adjustment');
     Route::get('/stock-adjustments', StockAdjustmentList::class)->name('stock-adjustments.index');
