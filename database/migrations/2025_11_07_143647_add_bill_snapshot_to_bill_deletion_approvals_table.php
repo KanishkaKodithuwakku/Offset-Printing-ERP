@@ -13,16 +13,33 @@ return new class extends Migration
     {
         Schema::create('bill_deletion_approvals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('vendor_bill_id')->nullable()->constrained('vendor_bills')->onDelete('set null');
-            $table->date('bill_date')->nullable()->after('vendor_bill_id');
-            $table->string('vendor_name')->nullable()->after('bill_date');
-            $table->string('ref_no')->nullable()->after('vendor_name');
-            $table->decimal('total_amount', 15, 2)->nullable()->after('ref_no');
-            $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
+
+            $table->foreignId('vendor_bill_id')
+                ->nullable()
+                ->constrained('vendor_bills')
+                ->onDelete('set null');
+
+            $table->date('bill_date')->nullable();
+            $table->string('vendor_name')->nullable();
+            $table->string('ref_no')->nullable();
+            $table->decimal('total_amount', 15, 2)->nullable();
+
+            $table->foreignId('requested_by')
+                ->constrained('users')
+                ->onDelete('cascade');
+
             $table->text('reason')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+
+            $table->enum('status', ['pending', 'approved', 'rejected'])
+                ->default('pending');
+
+            $table->foreignId('approved_by')
+                ->nullable()
+                ->constrained('users')
+                ->onDelete('set null');
+
             $table->timestamp('approved_at')->nullable();
+
             $table->timestamps();
         });
     }
