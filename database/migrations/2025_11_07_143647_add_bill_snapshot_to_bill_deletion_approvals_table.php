@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bill_deletion_approvals', function (Blueprint $table) {
-            $table->date('bill_date')->nullable()->after('vendor_bill_id');
-            $table->string('vendor_name')->nullable()->after('bill_date');
-            $table->string('ref_no')->nullable()->after('vendor_name');
-            $table->decimal('total_amount', 15, 2)->nullable()->after('ref_no');
+            $table->date('bill_date')->nullable();
+            $table->string('vendor_name')->nullable();
+            $table->string('ref_no')->nullable();
+            $table->decimal('total_amount', 15, 2)->nullable();
         });
     }
 
