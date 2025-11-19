@@ -70,7 +70,7 @@
                         <a wire:navigate href="{{ route('admin.bill-deletion-approvals') }}" class="menu-dropdown-item group"
                             :class="page === 'BillDeletionApprovals' ? 'menu-dropdown-item-active' :
                                             'menu-dropdown-item-inactive'">
-                            Bill Deletion Approvals
+                            Vendor Bill Approvals
                             <span class="absolute right-3 flex items-center gap-1">
                                 <span class="menu-dropdown-badge" :class="page === 'BillDeletionApprovals' ? 'menu-dropdown-badge-active' :
                                                     'menu-dropdown-badge-inactive'">
