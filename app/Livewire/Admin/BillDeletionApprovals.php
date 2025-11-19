@@ -113,31 +113,61 @@ class BillDeletionApprovals extends Component
         $entryTypeId = EntryType::where('label', 'vendor')->value('id');
         $accountsPayableLedgerId = 16; // Accounts Payable ledger ID (from BillPaymentForm)
 
-        // Get all entries that might be related to this bill
-        // We'll search by vendor_id and date range
-        $entries = Entry::with('entryitems')
-            ->where('entrytype_id', $entryTypeId)
-            ->whereHas('entryitems', function ($query) use ($bill) {
-                $query->where('customer_id', $bill->vendor_id);
-            })
-            ->whereDate('date', $bill->date)
-            ->get();
+        // Get all VendorBillPayments for this bill
+        // Note: VendorBillPayments without payment_date are expense lines (bill creation)
+        // VendorBillPayments with payment_date are actual payments
+        $billPayments = $bill->vendorBillPayments()->whereNull('payment_date')->get();
 
         $entryIdsToDelete = [];
 
-        foreach ($entries as $entry) {
-            // Check if this entry is related to our bill by checking narration or amount
-            $isRelated = false;
-            if (stripos($entry->narration, $bill->ref_no) !== false ||
-                stripos($entry->narration, $bill->vendor->name) !== false) {
-                $isRelated = true;
-            }
+        // For each VendorBillPayment (expense line), find and delete its corresponding Entry
+        foreach ($billPayments as $billPayment) {
+            // Find entries that match this bill payment:
+            // - Has an EntryItem with the expense ledger_id (debit) and matching amount
+            // - Has an EntryItem with accounts payable ledger_id 16 (credit) and matching amount
+            // - Same date as bill
+            // - Same vendor_id
+            $entries = Entry::with('entryitems')
+                ->where('entrytype_id', $entryTypeId)
+                ->whereDate('date', $bill->date)
+                ->whereHas('entryitems', function ($query) use ($bill, $billPayment, $accountsPayableLedgerId) {
+                    $query->where('customer_id', $bill->vendor_id)
+                          ->where(function($q) use ($billPayment, $accountsPayableLedgerId) {
+                              // Match expense ledger (debit)
+                              $q->where(function($subQ) use ($billPayment) {
+                                  $subQ->where('ledger_id', $billPayment->ledger_id)
+                                       ->where('dc', 'D')
+                                       ->where('amount', $billPayment->amount);
+                              })
+                              // OR match accounts payable ledger (credit)
+                              ->orWhere(function($subQ) use ($accountsPayableLedgerId, $billPayment) {
+                                  $subQ->where('ledger_id', $accountsPayableLedgerId)
+                                       ->where('dc', 'C')
+                                       ->where('amount', $billPayment->amount);
+                              });
+                          });
+                })
+                ->get();
 
-            if ($isRelated) {
-                $entryIdsToDelete[] = $entry->id;
+            foreach ($entries as $entry) {
+                // Verify this entry has both the expense ledger (debit) and accounts payable (credit) entry items
+                $hasExpenseLedger = $entry->entryitems->where('ledger_id', $billPayment->ledger_id)
+                    ->where('dc', 'D')
+                    ->where('amount', $billPayment->amount)
+                    ->count() > 0;
 
-                // Delete all entry items for this entry first
-                EntryItem::where('entry_id', $entry->id)->delete();
+                $hasAccountsPayable = $entry->entryitems->where('ledger_id', $accountsPayableLedgerId)
+                    ->where('dc', 'C')
+                    ->where('amount', $billPayment->amount)
+                    ->count() > 0;
+
+                // Only delete if this entry has both entry items (complete bill creation entry)
+                if ($hasExpenseLedger && $hasAccountsPayable && !in_array($entry->id, $entryIdsToDelete)) {
+                    $entryIdsToDelete[] = $entry->id;
+
+                    // Delete all entry items for this entry (both debit and credit)
+                    EntryItem::where('entry_id', $entry->id)->delete();
+                }
             }
         }
 
@@ -147,10 +177,12 @@ class BillDeletionApprovals extends Component
         }
 
         // Also delete payment entries if bill has payments
-        if ($bill->vendorBillPayments && $bill->vendorBillPayments->count() > 0) {
+        // Only process VendorBillPayments that have payment_date (actual payments, not expense lines)
+        $actualPayments = $bill->vendorBillPayments()->whereNotNull('payment_date')->get();
+        if ($actualPayments && $actualPayments->count() > 0) {
             $paymentEntryIdsToDelete = [];
 
-            foreach ($bill->vendorBillPayments as $payment) {
+            foreach ($actualPayments as $payment) {
                 // Find payment entries (these credit Accounts Payable and debit Bank/Cash)
                 $paymentEntries = Entry::with('entryitems')
                     ->where('entrytype_id', $entryTypeId)
