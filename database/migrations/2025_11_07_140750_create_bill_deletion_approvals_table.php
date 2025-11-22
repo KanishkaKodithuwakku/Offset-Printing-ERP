@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('bill_deletion_approvals', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
+            $table->unsignedBigInteger('vendor_bill_id')->nullable();
         });
     }
 
