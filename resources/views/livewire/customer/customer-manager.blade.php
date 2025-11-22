@@ -77,7 +77,7 @@
                             <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80">
                                 ID</p>
                             </th>
-                            <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80">
+                            <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80" style="width:13%">
                                 Customer Number
                             </th>
                             <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80">
@@ -95,7 +95,7 @@
                             <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80">
                                 Status
                             </th>
-                            <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80">
+                            <th class="px-4 py-3 font-normal text-left text-gray-500 dark:text-white/80" style="width:10%">
                                 Actions
                             </th>
                         </tr>
@@ -124,7 +124,7 @@
                                         <span class="text-error-600 bg-error-50">Inactive</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-2 space-x-2 text-xs">
+                                <td class="px-4 py-2 space-x-1 text-xs">
                                     <a wire:navigate href="{{ route('customers.edit', $customer->id) }}"
                                         class="inline-flex items-center pr-2 text-gray-500 hover:text-brand-500 dark:text-blue-400 dark:hover:text-blue-300">
                                         <svg class="fill-current" width="19" height="19" viewBox="0 0 21 21"

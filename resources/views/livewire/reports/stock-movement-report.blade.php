@@ -47,7 +47,7 @@
     </div>
 
     <div
-        class="w-full max-w-4xl p-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] ">
+        class="w-full max-w-4xl p-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-300 dark:bg-gray-800 ">
 
         <!-- Filters -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -55,18 +55,18 @@
 
             <!-- Item Search -->
             <div class=" mb-1">
-                <label class="block text-xs text-gray-700 font-medium">Search Item <span
-                        class="text-error-500">*</span></label>
+                <label class="block text-xs text-gray-700 dark:text-gray-400 font-medium">Search Item
+                    <span class="text-error-500">*</span></label>
                 <input type="text" wire:model.live.throttle.150ms="searchTerm" placeholder="Search items..."
-                    class="dark:bg-dark-900 mt-1 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 "
+                    class="dark:bg-dark-900 mt-1 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-600 dark:text-white/90 dark:placeholder:text-gray-400 "
                     style="width: 27%" />
 
                 <!-- Search Results -->
                 @if (!empty($searchResults))
-                <div class="max-w-full overflow-x-auto custom-scrollbar border">
+                <div class="max-w-full overflow-x-auto custom-scrollbar border border-gray-300 dark:border-gray-300">
                     <table class="w-full">
-                        <thead>
-                            <tr class="border-t border-gray-100 dark:border-gray-800">
+                        <thead class="bg-gray-100 dark:bg-gray-900">
+                            <tr class="border-t border-gray-100 dark:border-gray-300">
                                 <th class="px-3 py-3 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
                                         Item
@@ -84,12 +84,12 @@
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white dark:bg-gray-700">
                             @foreach ($searchResults as $item)
                             <tr wire:click="setItemId({{ $item['id'] }})" @if ($item['stock_balance'] !=0)
-                                class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-error-200"
+                                class="border-t border-gray-100 dark:border-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
                                 @else
-                                class="border-t border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed hover:bg-error-50 bg-error-50"
+                                class="border-t border-gray-100 dark:border-gray-300 opacity-50 cursor-not-allowed hover:bg-red-50 dark:hover:bg-red-900/20 bg-red-50 dark:bg-red-900/10"
                                 @endif>
                                 <td class="px-2 py-3">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-white/90">
@@ -115,9 +115,9 @@
 
             <!-- Movement type -->
             <div>
-                <label class="block text-xs text-gray-700 font-medium">Movement Type</label>
+                <label class="block text-xs text-gray-700 dark:text-gray-400 font-medium">Movement Type</label>
                 <select wire:model.change="movementType"
-                    class="mt-1 dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    class="mt-1 dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-gray-400"
                     style="width: 27%">
                     <option value=""> All Types </option>
                     <option value="adjustment">Adjustment</option>
@@ -128,7 +128,7 @@
             </div>
 
             <div class="flex items-center mb-4">
-                <label for="pagination-toggle" class="text-sm text-gray-700 mr-2">Enable Pagination:</label>
+                <label for="pagination-toggle" class="text-sm text-gray-700 dark:text-gray-400 mr-2">Enable Pagination:</label>
                 <input type="checkbox" id="pagination-toggle" wire:model.change="paginationEnabled"
                     class="form-checkbox">
             </div>
@@ -136,9 +136,9 @@
             <!-- Date range -->
             <div class="flex  gap-4">
                 <div class="relative">
-                    <label class="block text-xs text-gray-700 font-medium">From</label>
+                    <label class="block text-xs text-gray-700 dark:text-gray-400 font-medium">From</label>
                     <input type="date" wire:model.change="startDate" onclick="this.showPicker()"
-                        class="dark:bg-dark-900  datepickerTwo shadow-theme-xs w-full focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 pl-4 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                        class="dark:bg-dark-900  datepickerTwo shadow-theme-xs w-full focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  appearance-none rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 pl-4 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-600 dark:text-white/90 dark:placeholder:text-gray-400" />
                     <span
                         class="pointer-events-none mt-2 absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                         <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none"
@@ -150,9 +150,9 @@
                     </span>
                 </div>
                 <div class="relative">
-                    <label class="block text-xs text-gray-700 font-medium">To</label>
+                    <label class="block text-xs text-gray-700 dark:text-gray-400 font-medium">To</label>
                     <input type="date" wire:model.change="endDate" onclick="this.showPicker()"
-                        class="dark:bg-dark-900  datepickerTwo shadow-theme-xs w-full focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 pl-4 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                        class="dark:bg-dark-900  datepickerTwo shadow-theme-xs w-full focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  appearance-none rounded-lg border border-gray-300 dark:border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 pl-4 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:bg-gray-600 dark:text-white/90 dark:placeholder:text-gray-400" />
                     <span
                         class="pointer-events-none mt-2 absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                         <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none"
@@ -165,7 +165,7 @@
                 </div>
 
                 <div class="relative flex justify-end w-full">
-                    <button onclick="printPreview()" class="bg-brand-500 text-white py-1 px-4 rounded-lg">
+                    <button onclick="printPreview()" class="bg-brand-500 text-white py-1 px-4 h-8 rounded-lg">
                         Print Preview
                     </button>
                 </div>
@@ -174,76 +174,76 @@
 
         <!-- Table -->
         <div class="overflow-x-auto mt-6" id="printable-area">
-            <table class="min-w-full border-t border-gray-300 rounded-lg divide-y divide-gray-200">
-                <thead class="bg-gray-100">
+            <table class="min-w-full border border-gray-300 dark:border-gray-300 rounded-lg divide-y divide-gray-200 dark:divide-gray-300">
+                <thead class="bg-gray-100 dark:bg-gray-900">
                     <tr>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Movement
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
-                            Job Order Number
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
+                            GRN/Job Order Number
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Item
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Qty
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Previous Balance
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Current Balance
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                            class="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-300 dark:border-gray-300">
                             Last Movement
                         </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-300">
                     @forelse($movements as $m)
-                    <tr class="hover:bg-gray-200 transition-colors duration-150 @if(strtolower($m->table_name) == 'grn') bg-success-50 @endif @if(strtolower($m->table_name) == 'dispatch') bg-error-50 @endif"">
-                        <td class=" px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 @if(strtolower($m->table_name) == 'grn') bg-success-50 dark:bg-gray-700 @endif @if(strtolower($m->table_name) == 'dispatch') bg-error-50 dark:bg-gray-700 @endif">
+                        <td class=" px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300">
                         <p>{{ strtoupper($m->table_name) }} </p>
                         {{-- <p class="text-xs text-gray-200"> {{ $m->p_id }} </p> --}}
 
                         </td>
-                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300">
+                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300">
 
                             {{ $m->job_order_number ?? '—' }}
 
                         </td>
 
-                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300">
+                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300">
                             {{ $m->item_name }}
                             <!-- Use item_name directly from query -->
                         </td>
-                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300">
+                        <td class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300">
                             {{ $m->total_quantity }}
                         </td>
                         <td
-                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300 text-center">
+                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300 ">
                             {{ $m->previous_balance }}
                         </td>
                         <td
-                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300 text-center">
+                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300 ">
                             {{ $m->current_balance }}
                         </td>
                         <td
-                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 border-b border-gray-300 text-center">
+                            class="px-6 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-300 ">
                             {{ \Carbon\Carbon::parse($m->last_movement_date)->format('Y-m-d H:i:s') }}
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-2 text-center text-gray-500 border-b border-gray-300">
+                        <td colspan="6" class="px-6 py-2 text-center text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-300">
                             No movements found.
                         </td>
                     </tr>
@@ -255,21 +255,19 @@
 
 
         <!-- Pagination -->
-        <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-800">
+        <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-300">
             @if ($paginationEnabled)
             <div class="text-sm text-gray-600 dark:text-gray-400">
-                Showing {{ $movements->firstItem() }} to {{ $movements->lastItem() }} of
-                {{ $movements->total() }} entries
+                Showing {{ $movements->firstItem() ?? 0 }} to {{ $movements->lastItem() ?? 0 }} of
+                {{ $movements->total() ?? 0 }} entries
             </div>
             @endif
 
-            <div class="pagination flex justify-between">
-                @if ($paginationEnabled)
-                <div class="pagination flex justify-between">
-                    {{ $movements->links('vendor.pagination.custom-tailwind') }}
-                </div>
-                @endif
+            @if ($paginationEnabled && $movements->hasPages())
+            <div class="mt-4">
+                {{ $movements->links('vendor.pagination.custom-tailwind') }}
             </div>
+            @endif
         </div>
 
 

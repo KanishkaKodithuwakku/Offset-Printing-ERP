@@ -7,7 +7,7 @@
                 <div class="flex gap-2">
                     <!-- Pagination Toggle -->
                     <div class="flex items-center mb-2">
-                        <label for="pagination-toggle" class="mr-2 text-sm text-gray-700">Enable Pagination:</label>
+                        <label for="pagination-toggle" class="mr-2 text-sm text-gray-700 dark:text-gray-400">Enable Pagination:</label>
                         <input type="checkbox" id="pagination-toggle" wire:model.change="paginationEnabled" class="form-checkbox">
                     </div>
                     <!-- Print Button -->
@@ -30,17 +30,17 @@
                             </svg>
                         </span>
                         <input type="text" wire:model.live.debounce.100ms="searchTerm" placeholder="Search stocks..."
-                            class="h-[32px] w-full rounded-lg border border-gray-300 bg-transparent py-1.5 pr-4 pl-[42px] text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden xl:w-[300px] dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                            class="h-[32px] w-full rounded-lg border border-gray-300 bg-transparent py-1.5 pr-4 pl-[42px] text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden xl:w-[300px] dark:border-gray-300 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
                     </div>
                 </div>
             </div>
 
             <div class="max-w-full overflow-x-auto px-5 sm:px-6" id="printable-area">
-                <table class="min-w-full">
-                    <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
+                <table class="min-w-full border border-gray-100 dark:border-gray-400">
+                    <thead class="border-y border-gray-100 py-2 dark:border-gray-300 dark:bg-gray-900">
                         <tr>
 
-                           <th class="py-2 font-normal whitespace-nowrap" wire:click="sortByitem_name')">
+                           <th class="py-2 pl-2 font-normal whitespace-nowrap" wire:click="sortByitem_name')">
                                 <div class="flex items-center">
                                     <p class="text-theme-xs text-gray-500 dark:text-gray-400">Item Code</p>
                                 </div>
@@ -74,10 +74,10 @@
                             </th> --}}
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-300 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-300">
                         @foreach ($stocks as $stock)
-                            <tr stock_id="{{$stock->id}}">
-                                <td class="py-1 whitespace-nowrap">
+                            <tr stock_id="{{$stock->id}}" class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <td class="py-1 pl-2 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-700 dark:text-gray-400">
                                             {{ $stock->item_code }}
@@ -129,7 +129,7 @@
                 </table>
             </div>
 
-                    <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-800">
+                    <div class="flex justify-between items-center border-t mt-4 px-6 py-4 dark:border-gray-800">
                     @if ($paginationEnabled)
                     <div class="text-sm text-gray-600 dark:text-gray-400">
                         Showing {{ $stocks->firstItem() }} to {{ $stocks->lastItem() }} of

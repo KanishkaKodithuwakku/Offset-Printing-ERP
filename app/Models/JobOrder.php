@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class JobOrder extends Model
 {
@@ -85,5 +86,68 @@ class JobOrder extends Model
     public function invoiceBranch()
     {
         return $this->belongsTo(Branch::class, 'invoice_branch');
+    }
+
+    /**
+     * Check if all items in this job order are dispatched
+     *
+     * @return bool
+     */
+    public function isFullyDispatched()
+    {
+        return $this->orderItems()
+            ->where('status', '!=', 'dispatched')
+            ->doesntExist();
+    }
+
+    /**
+     * Check if any items in this job order are dispatched
+     *
+     * @return bool
+     */
+    public function hasDispatchedItems()
+    {
+        return $this->orderItems()
+            ->where('status', '=', 'dispatched')
+            ->exists();
+    }
+
+    /**
+     * Update job order status based on dispatch items status
+     *
+     * @return void
+     */
+    public function updateDispatchStatus()
+    {
+        if ($this->isFullyDispatched()) {
+            $this->update(['status' => 'dispatched']);
+            
+            // Update all related dispatch notes to dispatched
+            $this->dispatchNotes()->update(['status' => 'dispatched']);
+        } elseif ($this->hasDispatchedItems()) {
+            $this->update(['status' => 'dispatching']);
+        }
+    }
+
+    /**
+     * Get total ordered quantity for all items
+     *
+     * @return int
+     */
+    public function getTotalOrderedQuantity()
+    {
+        return $this->orderItems()->sum('quantity');
+    }
+
+    /**
+     * Get total dispatched quantity for all items
+     *
+     * @return int
+     */
+    public function getTotalDispatchedQuantity()
+    {
+        return DB::table('dispatch_items')
+            ->whereIn('job_order_item_id', $this->orderItems()->pluck('id'))
+            ->sum('quantity');
     }
 }

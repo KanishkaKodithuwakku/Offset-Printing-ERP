@@ -72,45 +72,73 @@
         @endif
         {{-- Filter Section --}}
         <div class="bg-white border rounded p-3 mb-4">
-            <div class="flex items-center gap-6 text-sm">
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="due_on_or_before" wire:model.change="applyDueFilter"
-                        class="text-blue-600">
-                    <label for="due_before" class="text-sm">Due on or before</label>
-                    <input @disabled(! $applyDueFilter) type="date" wire:model.change="dueDateFilter"
-                        onclick="this.showPicker()"
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                        value="2025-06-02" />
-                    {{ $dueDateFilter }}
-                </div>
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-6 text-sm">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="due_on_or_before" wire:model.change="applyDueFilter"
+                            class="text-blue-600">
+                        <label for="due_before" class="text-sm">Due on or before</label>
+                        <input @disabled(! $applyDueFilter) type="date" wire:model.change="dueDateFilter"
+                            onclick="this.showPicker()"
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                            value="2025-06-02" />
+                        
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="show_all" wire:model.change="showAllBills" class="text-blue-600">
-                    <label for="show_all" class="text-sm">Show all bills</label>
-                </div>
+                    {{-- Search Bar --}}
+                    <div class="flex items-center gap-2">
+                        <label for="search" class="text-sm font-medium text-gray-700">Search</label>
+                        <input type="text"
+                            wire:model.live.debounce.300ms="searchTerm"
+                            id="search"
+                            placeholder="Search by invoice number or vendor name..."
+                            class="h-8 px-3 py-1 border border-gray-300 rounded-lg text-xs text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                            style="min-width: 250px;">
+                        @if($searchTerm)
+                            <button wire:click="$set('searchTerm', '')"
+                                class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
 
-                <div class="flex items-center  gap-2">
-                    <label for="filter_by_vendor" class="text-sm">Filter By</label>
-                    <select wire:model.change="selectedVendor" id="vendor" @disabled($showAllBills)
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent gap-3 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
-                        <option value="">Select vendor</option>
-                        @foreach ($vendors as $vendor)
-                        <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('vendor_id')
-                    <span class="error text-error-500 text-sm">{{ $message }}</span>
-                    @enderror
-                </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="show_all" wire:model.change="showAllBills" class="text-blue-600">
+                        <label for="show_all" class="text-sm">Show all bills</label>
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <label class="text-sm">Sort By</label>
-                    <select wire:model.change="sortBy" @disabled($showAllBills)
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent gap-3 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"">
-                    <option value=" due_date">Due Date</option>
-                        <option value="vendor_id">Vendor</option>
-                        <option value="total_amount">Amount</option>
-                    </select>
+                    <div class="flex items-center  gap-2">
+                        <label for="filter_by_vendor" class="text-sm">Filter By</label>
+                        <select wire:model.change="selectedVendor" id="vendor" @disabled($showAllBills)
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent gap-3 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30">
+                            <option value="">Select vendor</option>
+                            @foreach ($vendors as $vendor)
+                            <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('vendor_id')
+                        <span class="error text-error-500 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm">Sort By</label>
+                        <select wire:model.change="sortBy" @disabled($showAllBills)
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8  rounded-lg border border-gray-300 bg-transparent gap-3 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"">
+                        <option value=" due_date">Due Date</option>
+                            <option value="vendor_id">Vendor</option>
+                            <option value="total_amount">Amount</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <button wire:click="openDeleteModal"
+                        @if(empty($selectedBills)) disabled @endif
+                        class="px-4 py-2 bg-error-500 hover:bg-error-600 text-white rounded text-xs transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Delete Bills
+                    </button>
                 </div>
             </div>
         </div>
@@ -136,17 +164,19 @@
                 </thead>
                 <tbody class="bg-white">
                     @forelse($bills as $index => $bill)
-                    <tr class="border-b hover:bg-blue-50 {{ in_array($bill->id, $selectedBills ?? []) ? 'bg-blue-100' : '' }}" wire:key="bill-{{ $bill->id }}">
+                    <tr class="border-b {{ $bill->has_pending_deletion ?? false ? 'bg-gray-100 opacity-60' : 'hover:bg-blue-50' }} {{ in_array($bill->id, $selectedBills ?? []) && !($bill->has_pending_deletion ?? false) ? 'bg-blue-100' : '' }}" wire:key="bill-{{ $bill->id }}">
                         <td class="p-2 border-r">
                             <input type="checkbox" wire:click="toggleSelectedBill({{ $bill->id }})"
-                                @if(in_array($bill->id, $selectedBills ?? [])) checked @endif>
+                                @if($bill->has_pending_deletion ?? false) disabled @endif
+                                @if(in_array($bill->id, $selectedBills ?? [])) checked @endif
+                                class="{{ ($bill->has_pending_deletion ?? false) ? 'opacity-50 cursor-not-allowed accent-gray-400' : 'accent-blue-600' }}">
                         </td>
-                        <td class="p-2 border-r">
+                        <td class="p-2 border-r {{ ($bill->has_pending_deletion ?? false) ? 'text-gray-400' : '' }}">
                             {{ $bill->date ? date('d/m/Y', strtotime($bill->date)) : now() }}</td>
-                        <td class="p-2 border-r">{{ $bill->vendor->name ?? '' }}</td>
-                        <td class="p-2 border-r">{{ $bill->ref_no ?? '' }}</td>
-                        <td class="p-2 text-right border-r">{{ number_format($bill->amount_due ?? 10000.0, 2) }}</td>
-                        <td class="p-2 text-right">
+                        <td class="p-2 border-r {{ ($bill->has_pending_deletion ?? false) ? 'text-gray-400' : '' }}">{{ $bill->vendor->name ?? '' }}</td>
+                        <td class="p-2 border-r {{ ($bill->has_pending_deletion ?? false) ? 'text-gray-400' : '' }}">{{ $bill->ref_no ?? '' }}</td>
+                        <td class="p-2 text-right border-r {{ ($bill->has_pending_deletion ?? false) ? 'text-gray-400' : '' }}">{{ number_format($bill->amount_due ?? 10000.0, 2) }}</td>
+                        <td class="p-2 text-right {{ ($bill->has_pending_deletion ?? false) ? 'text-gray-400' : '' }}">
                             {{ number_format($bill->total_amount, 2) }}</td>
                     </tr>
                     @empty
@@ -284,3 +314,46 @@
             </div>
         </div>
     </div>
+
+    {{-- Delete Confirmation Modal --}}
+    @if ($showDeleteModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm" style="background-color: rgba(25, 25, 25, 0.339);" x-data="{ open: @entangle('showDeleteModal') }" x-show="open" x-transition>
+            <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" @click.away="open = false">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Delete Bills Confirmation</h3>
+                    <button wire:click="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-3">
+                        You are about to submit <strong>{{ count($selectedBills ?? []) }}</strong> bill(s) for deletion approval.
+                    </p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for Deletion <span class="text-error-500">*</span>
+                    </label>
+                    <textarea wire:model="deletionReason"
+                        rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        placeholder="Please provide a reason for deleting these bills..."></textarea>
+                    @error('deletionReason')
+                        <span class="text-error-500 text-xs mt-1">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button wire:click="closeDeleteModal"
+                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm transition">
+                        Cancel
+                    </button>
+                    <button wire:click="submitSelectedBillsForDeletion"
+                        class="px-4 py-2 bg-error-500 hover:bg-error-600 text-white rounded text-sm transition">
+                        Submit for Approval
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif

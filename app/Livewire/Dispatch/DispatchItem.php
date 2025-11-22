@@ -170,9 +170,9 @@ class DispatchItem extends Component
                     continue;
                 }
 
-                $orderedQty = $jobOrderItem->quantity;
-                $alreadyDispatchedQty = ModelsDispatchItem::where('job_order_item_id', $item['job_order_item_id'])->sum('quantity');
-                $newTotalDispatchedQty = $alreadyDispatchedQty + $item['quantity'];
+                $orderedQty = (int) $jobOrderItem->quantity;
+                $alreadyDispatchedQty = (int) ModelsDispatchItem::where('job_order_item_id', $item['job_order_item_id'])->sum('quantity');
+                $newTotalDispatchedQty = $alreadyDispatchedQty + (int) $item['quantity'];
 
                 $dispatchItem = ModelsDispatchItem::create([
                     'item_id' => $item['item_id'],
@@ -187,7 +187,7 @@ class DispatchItem extends Component
                     'branch_done' => 1,
                 ]);
 
-                if ($newTotalDispatchedQty == $orderedQty) {
+                if ($newTotalDispatchedQty >= $orderedQty) {
                     $jobOrderItem->status = 'dispatched';
                     $dispatchItem->status = 'dispatched';
                     $jobOrderItem->save();
@@ -196,19 +196,15 @@ class DispatchItem extends Component
             }
 
             //Update dispatch note & job order status
-            $undispatchedItemsCount = JobOrderItem::where('order_id', $jobOrder->id)
-                ->where('status', '!=', 'dispatched')
-                ->count();
-
-            if ($undispatchedItemsCount == 0) {
-                DispatchNote::where('job_order_id', $jobOrder->id)
-                    ->update(['status' => 'dispatched']);
-
-                $jobOrder->status = 'dispatched';
-                $jobOrder->save();
+            // Use the new helper method for consistent status update
+            $jobOrder->fresh(); // Reload to get latest relationships
+            $jobOrder->updateDispatchStatus();
+            
+            // Update current dispatch note status
+            if ($jobOrder->isFullyDispatched()) {
+                $dispatch->update(['status' => 'dispatched']);
             } else {
-                $dispatch->status = 'partial';
-                $dispatch->save();
+                $dispatch->update(['status' => 'dispatching']);
             }
 
             $this->dispatchStatus = $dispatch->status;
@@ -317,9 +313,9 @@ class DispatchItem extends Component
 
                 // mark fully-dispatched items
                 $jobOrderItem = JobOrderItem::find($item['job_order_item_id']);
-                $already = ModelsDispatchItem::where('job_order_item_id', $item['job_order_item_id'])
+                $already = (int) ModelsDispatchItem::where('job_order_item_id', $item['job_order_item_id'])
                     ->sum('quantity');
-                if ($already === $jobOrderItem->quantity) {
+                if ($already >= (int) $jobOrderItem->quantity) {
                     $jobOrderItem->status = 'dispatched';
                     $jobOrderItem->save();
                     $line->status        = 'dispatched';
@@ -333,16 +329,15 @@ class DispatchItem extends Component
                 'total_amount' => $totalValue,
             ]);
 
-            $undispatched = JobOrderItem::where('order_id', $jobOrder->id)
-                ->where('status', '!=', 'dispatched')
-                ->exists();
-
-            if ($undispatched) {
-                $dispatch->update(['status' => 'dispatching']);
-                $jobOrder->update(['status' => 'dispatching']);
-            } else {
+            // Use the new helper method for consistent status update
+            $jobOrder->fresh(); // Reload to get latest relationships
+            $jobOrder->updateDispatchStatus();
+            
+            // Update current dispatch note status based on job order status
+            if ($jobOrder->isFullyDispatched()) {
                 $dispatch->update(['status' => 'dispatched']);
-                $jobOrder->update(['status' => 'dispatched']);
+            } else {
+                $dispatch->update(['status' => 'dispatching']);
             }
 
             DB::commit();

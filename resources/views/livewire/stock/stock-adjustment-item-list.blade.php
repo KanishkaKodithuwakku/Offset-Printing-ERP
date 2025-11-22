@@ -2,8 +2,8 @@
 
 
     @if ($adjustment)
-        <div class="p-4 bg-white shadow rounded-lg">
-            <h4 class="font-semibold mb-4 text-normal text-gray-800">Adjustment Items for Adjustment</h4>
+        <div class="p-4 bg-white dark:bg-gray-700 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+            <h4 class="font-semibold mb-4 text-normal text-gray-800 dark:text-white/90">Adjustment Items for Adjustment</h4>
 
 
 
@@ -53,31 +53,31 @@
                 </div>
             @endif
 
-            <table class="min-w-full mt-4 table-auto border-collapse">
+            <table class="min-w-full mt-4 table-auto border-collapse border border-gray-200 dark:border-gray-700">
                 <thead>
-                    <tr>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Item Name</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Item Code</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Pre Qty</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Adjustment Qty</th>
-                        <th class="px-4 py-2 text-sm text-gray-500 border text-left">Remark</th>
+                    <tr class="bg-gray-100 dark:bg-gray-900">
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-left">Item Name</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-left">Item Code</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-left">Pre Qty</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-left">Adjustment Qty</th>
+                        <th class="px-4 py-2 text-sm text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-gray-600 text-left">Remark</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($adjustment->adjustmentItems as $item)
-                        <tr>
-                            <td class="px-4 py-2 text-xs border">{{ $item->item->item_name }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->item->item_code }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->pre_qty }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->quantity }}</td>
-                            <td class="px-4 py-2 text-xs border">{{ $item->remark }}</td>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:bg-gray-800">
+                            <td class="px-4 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-200">{{ $item->item->item_name }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-200">{{ $item->item->item_code }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-200">{{ $item->pre_qty }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-200">{{ $item->quantity }}</td>
+                            <td class="px-4 py-2 text-xs border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-200">{{ $item->remark }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
     @else
-        <p class="text-gray-500">No items to display. Please click on a valid adjustment row.</p>
+        <p class="text-gray-500 dark:text-gray-400">No items to display. Please click on a valid adjustment row.</p>
     @endif
 
     <!-- Approve Button -->
@@ -85,10 +85,10 @@
         @if ($adjustment->status != 'approved')
             <!-- Show button if not already approved -->
             <button wire:click="approveAdjustment"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md text-xs shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+                class="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-md text-xs shadow-md transition duration-300 ease-in-out transform hover:scale-105"
                 style="background-color:#465FFF;">Approve
                 Adjustment</button>
-        
+
         @endif
     </div>
 </div>

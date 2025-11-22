@@ -45,9 +45,9 @@
             </div>
         @endif
     </div>
-    
+
     <div
-        class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-600 dark:bg-white/[0.03]">
         <div class="flex flex-col gap-2 px-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -96,7 +96,7 @@
             <div class="min-w-[1102px]">
                 <!-- Table Header -->
                 <div
-                    class="grid grid-cols-12 font-medium text-gray-700 border-t border-gray-200 dark:border-gray-800 text-theme-xs dark:text-gray-400">
+                    class="grid grid-cols-12 font-medium text-gray-700 border-t border-gray-200 dark:border-gray-600 dark:bg-gray-900 text-theme-xs dark:text-gray-400">
                     <div class="flex items-center col-span-1 px-4 py-3">ID</div>
                     <div class="flex items-center col-span-3 px-4 py-3">Name</div>
                     <div class="flex items-center col-span-2 px-4 py-3">Code</div>
@@ -109,7 +109,7 @@
                 <!-- Table Body -->
                 @forelse ($items as $item)
                     <div
-                        class="grid grid-cols-12 py-2 text-gray-700 border-t border-gray-100 dark:border-gray-800 text-theme-xs dark:text-gray-400">
+                        class="grid grid-cols-12 py-2 text-gray-700 border-t border-gray-100 dark:border-gray-600 dark:bg-gray-800 text-theme-xs dark:hover:bg-gray-700 dark:text-gray-300">
                         <div class="flex items-center col-span-1 px-4">{{ $item->id }}</div>
                         <div class="flex items-center col-span-3 px-4">{{ $item->item_name }}</div>
                         <div class="flex items-center col-span-2 px-4">{{ $item->item_code }}</div>
@@ -227,8 +227,8 @@
         </div>
 
         <!-- Pagination Controls -->
-        <div class="flex items-center justify-between px-6 py-4 border-t dark:border-gray-800">
-            <div class="text-sm text-gray-600 dark:text-gray-400">
+        <div class="flex items-center justify-between px-6 py-4 border-t dark:border-gray-600">
+            <div class="text-sm text-gray-600 dark:text-gray-300">
                 Showing {{ $items->firstItem() }} to {{ $items->lastItem() }} of {{ $items->total() }} entries
             </div>
 

@@ -1,4 +1,4 @@
-<div class="p-4 rounded-xl bg-white dark:bg-dark-800 shadow-sm space-y-5">
+<div class="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-sm space-y-5">
     @if (session('success'))
             <div class="rounded-xl border border-success-500 bg-success-50 p-4 dark:border-success-500/30 dark:bg-success-500/15">
                 <div class="flex items-start gap-3">
@@ -43,13 +43,19 @@
             </div>
         @endif
 
+        <h1 class="text-base font-semibold text-gray-800 dark:text-white/90">
+            Stock Transfer
+        </h1>
+
     <div class="grid grid-cols-2 gap-6">
+
         <!-- Left Column -->
         <div class="space-y-4">
+
             <!-- Transfer Date -->
             <div>
-                <label class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-400">Transfer Date</label>
-                <input type="text" value="{{ now()->format('Y-m-d') }}" readonly class="h-8 w-full text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white/70 cursor-not-allowed">
+                <label class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-200">Transfer Date</label>
+                <input type="text" value="{{ now()->format('Y-m-d') }}" readonly class="h-8 w-full text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 cursor-not-allowed">
             </div>
             <!-- From Branch -->
             <div>
@@ -89,8 +95,8 @@
 
         <!-- Right Column -->
         <div class="space-y-4">
-           
-           
+
+
            {{-- Search job number starts --}}
             {{-- <div class="relative pt-4 ">
                 <label class="block text-xs text-gray-700 font-medium">Search Job {{$job_order_id}}<span
@@ -149,20 +155,20 @@
                 @enderror
             </div> --}}
             {{-- Search Job number ends --}}
-           
-           
-           
-           
+
+
+
+
             <!-- Search Item -->
             <div>
-                <label class="block text-xs text-gray-700 font-medium">Search Item<span class="text-error-500">*</span></label>
-                <input type="text" wire:model.live.throttle.150ms="searchTerm" placeholder="Search items..." class="dark:bg-dark-900 mt-2 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+                <label class="block text-xs text-gray-700 dark:text-gray-300 font-medium">Search Item<span class="text-error-500">*</span></label>
+                <input type="text" wire:model.live.throttle.150ms="searchTerm" placeholder="Search items..." class="dark:bg-dark-900 mt-1 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-8 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
                 <!-- Search Results -->
                 @if (!empty($searchResults))
-                <div class="max-w-full overflow-x-auto custom-scrollbar border">
+                <div class="max-w-full overflow-x-auto custom-scrollbar border border-gray-300 dark:border-gray-600">
                     <table class="w-full">
-                        <thead>
-                            <tr class="border-t border-gray-100 dark:border-gray-800">
+                        <thead class="dark:bg-gray-900 bg-gray-200">
+                            <tr class="border-t border-gray-100 dark:border-gray-600">
                                 <th class="px-3 py-3 text-left">
                                     <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Item</p>
                                 </th>
@@ -177,24 +183,24 @@
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="dark:bg-gray-700">
                             @foreach ($searchResults as $item)
-                            <tr wire:click="addOrderItem({{ $item['id'] }})" class="border-t border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-200">
+                            <tr wire:click="addOrderItem({{ $item['id'] }})" class="border-t border-gray-100 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800">
                                 <td class="px-2 py-3">
-                                    <p class="font-medium text-gray-500 text-theme-xs dark:text-white/90">
+                                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-300">
                                         {{ $item['item_name'] }}
                                     </p>
                                 </td>
                                 <td class="px-6 py-3">
-                                    <p class="text-gray-500 text-theme-xs dark:text-gray-400">
+                                    <p class="text-gray-500 text-theme-xs dark:text-gray-300">
                                         {{ $item['item_code'] }}</p>
                                 </td>
                                 <td class="px-6 py-3">
-                                    <p class="text-gray-500 text-theme-xs dark:text-gray-400">
+                                    <p class="text-gray-500 text-theme-xs dark:text-gray-300">
                                         {{ $item['selling_price'] }}</p>
                                 </td>
                                 <td class="px-6 py-3">
-                                    <p class="text-gray-500 text-theme-xs dark:text-gray-400">
+                                    <p class="text-gray-500 text-theme-xs dark:text-gray-300">
                                         {{ $item['stock_balance'] }}
                                     </p>
                                 </td>
@@ -209,9 +215,9 @@
             @if (!empty($jobOrderItems))
             {{-- {{ json_encode($jobOrderItems) }} --}}
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto ">
-                <table class="min-w-full">
-                    <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
-                        <tr class="bg-gray-200">
+                <table class="min-w-full border border-gray-300 dark:border-gray-600">
+                    <thead class="border-y border-gray-100 py-2 dark:border-gray-600 dark:bg-gray-900 bg-gray-200">
+                        <tr>
                             <th class="py-2 font-normal whitespace-nowrap px-2">
                                 <div class="flex items-center">
                                     <p class="text-theme-xs text-gray-500 dark:text-gray-400">Item</p>
@@ -234,27 +240,27 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-600 dark:bg-gray-700">
                         @foreach ($jobOrderItems as $index => $orderItem)
                         <tr class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300 px-2">
                                         {{ $orderItem['name'] }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-300 px-2">
                                         {{ $orderItem['code'] }}
                                     </p>
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        <input type="number" wire:model="jobOrderItems.{{ $index }}.quantity" wire:change="updateTotal({{ $index }})" min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}" class="w-16 border p-1 text-center">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-800">
+                                        <input type="number" wire:model="jobOrderItems.{{ $index }}.quantity" wire:change="updateTotal({{ $index }})" min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}" class="w-16 border p-1 text-center dark:bg-gray-600 dark:border-gray-500 dark:text-gray-800">
                                     </p>
                                 </div>
                             </td>
@@ -262,8 +268,8 @@
                                 <div class="flex items-center justify-center">
                                     <p class="text-theme-xs text-gray-300 dark:text-gray-400 text-center hover:text-gray-500">
                                         @if ($status != 'complete')
-                                        <button wire:click="removeItem({{ $index }},{{ $orderItem['id'] }})" class="text-red-500">
-                                            <svg class="w-4 h-4 text-gray-800 dark:text-white hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                                        <button wire:click="removeItem({{ $index }},{{ $orderItem['id'] }})" class="text-error-500">
+                                            <svg class="w-4 h-4 text-error-500 dark:text-error-500 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
                                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                             </svg>
                                         </button>

@@ -73,9 +73,11 @@
                 (Duplicate #{{ $invoice->print_count }})
                 @endif
             </h2>
+            <p style="margin: 2px 0;padding:0px;font-weight: 600;">{{ $invoice->customer->is_credit_customer ? 'Credit' : 'Cash' }}</p>
             <p style="margin: 2px 0;padding:0px;">Date: {{ $invoice->created_at->format('F j, Y') }}</p>
             <p style="margin: 2px 0;padding:0px;">Invoice No: {{ $invoice->invoice_number }}</p>
             <p style="margin: 2px 0;padding:0px;">PO No: {{ $invoice->order->customer_po_number }}</p>
+
         </div>
     </div>
 
@@ -101,7 +103,15 @@
             @foreach ($invoiceItems as $item)
             <tr>
                 <td style="border-left: 1px solid #000; padding: 2px;text-align:center">{{ $item->quantity }}</td>
-                <td style="padding: 2px 0 2px 35px; ">{{ $item->item->item_name }}</td>
+                <td style="padding: 2px 0 2px 35px; ">
+                    @if($item->item)
+                        {{ $item->item->item_name }}
+                    @elseif($item->expense)
+                        {{ $item->expense->expense_name }}
+                    @else
+                        Unknown Item
+                    @endif
+                </td>
                 <td style="padding: 2px;text-align:right;padding: 2px 4px 2px 0px;">{{ number_format($item->unit_price,
                     2) }}</td>
                 <td style="border-right: 1px solid #000; padding: 2px 6px 2px 0px;text-align:right">{{
@@ -117,9 +127,9 @@
                 <td style="padding: 2px;text-align:right;padding: 2px 4px 2px 0px;">{{$invoice->backed_plates_price}}</td>
                 <td style="border-right: 1px solid #000; padding: 2px 6px 2px 0px;text-align:right">{{
                     number_format($invoice->backed_plates_price*$invoice->order->backing_qty, 2) }}</td>
-            </tr> 
+            </tr>
             @endif
-           
+
 
             <!-- Grand Total Row -->
             <tr>

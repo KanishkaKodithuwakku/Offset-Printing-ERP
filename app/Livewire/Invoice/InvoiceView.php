@@ -6,11 +6,13 @@ use App\Models\Customer;
 use App\Models\Entry;
 use App\Models\EntryItem;
 use App\Models\EntryType;
+use App\Models\ExpensesItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Item;
 use App\Models\JobOrder;
 use App\Models\Ledger;
+use App\Models\OtherExpense;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -38,6 +40,8 @@ class InvoiceView extends Component
     public $backedTotal = 0.00;
     public $originalBackedPrice;
     public $customer_po_number;
+    public $availableOtherExpenses = [];
+    public $selectedOtherExpenses = [];
 
     public function mount($invoiceId)
     {
@@ -54,24 +58,46 @@ class InvoiceView extends Component
         $this->customer = Customer::find($this->invoice->customer_id);
         $this->total_amount = $this->invoice->total_amount;
 
-        $invoiceItems = InvoiceItem::where('invoice_id', $invoiceId)->get();
-        // $this->backedQty = $invoiceItems->invoice->order->backing_qty
+        // Load regular invoice items
+        $invoiceItems = InvoiceItem::with('item')->where('invoice_id', $invoiceId)->get();
+
+        // Load expenses items
+        $expensesItems = ExpensesItem::with('expense')->where('invoice_id', $invoiceId)->get();
+
         $this->backedQty = $this->invoice->order->backing_qty;
         $this->isPlateBacking = $this->invoice->order->plate_backing;
-        $this->backedTotal = $this->backedPrice * $this->backedQty;
-        $this->backedPrice = number_format($this->invoice->backed_plates_price, 2, '.', '');
 
-        $this->invoiceItems = $invoiceItems->map(function ($invoiceItem) {
+        // Store backedPrice as numeric value for calculations
+        $this->backedPrice = (float) $this->invoice->backed_plates_price ?? 0.0;
+        $this->backedTotal = $this->backedPrice * (float) $this->backedQty;
 
-            return [
+        // Combine regular items and expenses
+        $this->invoiceItems = [];
+
+        // Add regular invoice items
+        foreach ($invoiceItems as $invoiceItem) {
+            $this->invoiceItems[] = [
                 'id' => $invoiceItem->id,
                 'item_id' => $invoiceItem->item_id,
                 'name' => $invoiceItem->item->item_name,
-                'unit_price' => $invoiceItem->unit_price,
-                'quantity' => $invoiceItem->quantity,
-                'total_price' => $invoiceItem->total_price
+                'unit_price' => (float) ($invoiceItem->unit_price ?? 0),
+                'quantity' => (int) ($invoiceItem->quantity ?? 1),
+                'total_price' => (float) ($invoiceItem->total_price ?? 0)
             ];
-        })->toArray();
+        }
+
+        // Add expenses items
+        foreach ($expensesItems as $expenseItem) {
+            $this->invoiceItems[] = [
+                'id' => $expenseItem->id,
+                'expense_id' => $expenseItem->expense_id,
+                'name' => $expenseItem->expense->expense_name,
+                'unit_price' => (float) ($expenseItem->expense_price ?? 0),
+                'quantity' => (int) ($expenseItem->quantity ?? 1),
+                'total_price' => (float) ($expenseItem->total_price ?? 0),
+                'is_other_expense' => true
+            ];
+        }
 
         // Clone to track original values
         $this->originalInvoiceItems = $this->invoiceItems;
@@ -79,6 +105,9 @@ class InvoiceView extends Component
         $this->originalBackedPrice = $this->backedPrice;
         $this->calculateTotal();
         $this->changesMade = false;
+
+        // Load available other expenses
+        $this->loadAvailableOtherExpenses();
     }
 
 
@@ -89,13 +118,39 @@ class InvoiceView extends Component
 
         // 1) line‐item changes
         foreach ($this->invoiceItems as $i => $item) {
-            if (
-                $item['unit_price']  != $this->originalInvoiceItems[$i]['unit_price']
-                || $item['total_price'] != $this->originalInvoiceItems[$i]['total_price']
-            ) {
+            // Check if we have a corresponding original item
+            if (isset($this->originalInvoiceItems[$i])) {
+                $originalItem = $this->originalInvoiceItems[$i];
+
+                // Compare based on item type
+                if (isset($item['is_other_expense']) && $item['is_other_expense']) {
+                    // For other expenses, compare expense_id, quantity, unit_price, total_price
+                    if ($item['expense_id'] != ($originalItem['expense_id'] ?? null) ||
+                        $item['quantity'] != ($originalItem['quantity'] ?? 0) ||
+                        $item['unit_price'] != ($originalItem['unit_price'] ?? 0) ||
+                        $item['total_price'] != ($originalItem['total_price'] ?? 0)) {
+                        $this->changesMade = true;
+                        return;
+                    }
+                } else {
+                    // For regular items, compare unit_price and total_price
+                    if ($item['unit_price'] != ($originalItem['unit_price'] ?? 0) ||
+                        $item['total_price'] != ($originalItem['total_price'] ?? 0)) {
+                        $this->changesMade = true;
+                        return;
+                    }
+                }
+            } else {
+                // New item added
                 $this->changesMade = true;
                 return;
             }
+        }
+
+        // Check if items were removed
+        if (count($this->invoiceItems) != count($this->originalInvoiceItems)) {
+            $this->changesMade = true;
+            return;
         }
 
         // 2) plates‐price changed?
@@ -113,6 +168,32 @@ class InvoiceView extends Component
 
     public function viewPrintPreview()
     {
+        // Check PO Required validation before starting transaction
+        $invoice = Invoice::with('customer', 'order')->find($this->invoiceId);
+
+        if (!$invoice) {
+            session()->flash('error', 'Invoice not found!');
+            return;
+        }
+
+        if ($invoice->status === 'invoicing') {
+            $customer = $invoice->customer;
+
+            // Check if customer has PO required checked
+            if ($customer->po_required) {
+                // Refresh order from database to get latest PO number
+                $invoice->order->refresh();
+
+                // Check PO number from database only (not input box)
+                $poNumber = trim($invoice->order->customer_po_number ?? '');
+
+                // Check if PO number is empty in database
+                if (empty($poNumber)) {
+                    session()->flash('error', 'Please fill PO number and Generate invoice');
+                    return;
+                }
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -126,6 +207,49 @@ class InvoiceView extends Component
 
             if ($invoice->status === 'invoicing') {
 
+                // Credit Limit Validation
+                $customer = $invoice->customer;
+
+                // Check if customer is cash customer and has outstanding balance
+                if ($customer->is_cash_customer) {
+                    $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                        ->where('status', '!=', 'cancelled')
+                        ->where('amount_due', '>', 0)
+                        ->where('id', '!=', $invoice->id) // Exclude current invoice
+                        ->sum('amount_due');
+
+                    if ($currentOutstanding > 0) {
+                        session()->flash('error', "Can't create invoice. This customer have " . number_format($currentOutstanding, 2) . " outstanding balance. Please clear and generate invoice.");
+                        DB::rollBack();
+                        return;
+                    }
+                }
+
+                // Calculate customer's current outstanding balance (excluding this invoice)
+                $currentOutstanding = Invoice::where('customer_id', $customer->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->where('amount_due', '>', 0)
+                    ->where('id', '!=', $invoice->id) // Exclude current invoice
+                    ->sum('amount_due');
+
+                 // Calculate total amount including this invoice (including other expenses)
+                 $allInvoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+                 $allExpensesItems = ExpensesItem::where('invoice_id', $invoice->id)->get();
+                 $calculatedTotalAmount = $allInvoiceItems->sum('total_price') + $allExpensesItems->sum('total_price') + ($invoice->backed_plates_price * $invoice->order->backing_qty);
+                $totalAmountWithThisInvoice = $currentOutstanding + $calculatedTotalAmount;
+
+                // Check Credit Limit 2 (Hard limit - prevent invoice generation)
+                if ($customer->credit_limit_2_amount && $totalAmountWithThisInvoice > $customer->credit_limit_2_amount) {
+                    session()->flash('warning', "Credit limit 2 has been exceeded Rs. " . number_format($customer->credit_limit_2_amount, 2) . "");
+                    DB::rollBack();
+                    return;
+                }
+
+                // Check Credit Limit 1 (Soft limit - show warning but allow generation)
+                if ($customer->credit_limit_1_amount && $totalAmountWithThisInvoice > $customer->credit_limit_1_amount) {
+                    session()->flash('warning', "Credit limit 1 exceeded {" . number_format($customer->credit_limit_1_amount, 2) . "}");
+                }
+
                 $entryTypeId = EntryType::where('label', 'invoice')->value('id') ?? 4; // Fallback to 'journal'
 
                 $entry = Entry::create([
@@ -135,8 +259,8 @@ class InvoiceView extends Component
                     'number' => 1,
                     'date' => now(),
                     'narration' => "Invoice {$invoice->invoice_number} for Customer {$invoice->customer->name}",
-                    'dr_total' => $invoice->total_amount,
-                    'cr_total' => $invoice->total_amount,
+                    'dr_total' => $calculatedTotalAmount,
+                    'cr_total' => $calculatedTotalAmount,
                 ]);
 
                 $accountsReceivableLedgerId = Ledger::where('name', 'Accounts Receivable')->value('id');
@@ -145,8 +269,8 @@ class InvoiceView extends Component
 
                 // Calculate VAT amount if applicable (simplified example: assume 15%)
                 $vatRate = 0.00;
-                $vatAmount = round($invoice->total_amount * $vatRate, 2);
-                $salesAmount = round($invoice->total_amount - $vatAmount, 2);
+                $vatAmount = round($calculatedTotalAmount * $vatRate, 2);
+                $salesAmount = round($calculatedTotalAmount - $vatAmount, 2);
 
                 // Debit Accounts Receivable (Customer)
                 EntryItem::create([
@@ -155,7 +279,7 @@ class InvoiceView extends Component
                     'branch_id' => auth()->user()->branch_id,
                     'ledger_id' => $accountsReceivableLedgerId,
                     'dc' => 'D',
-                    'amount' => $invoice->total_amount,
+                    'amount' => $calculatedTotalAmount,
                 ]);
 
                 // Credit Sales Revenue
@@ -178,18 +302,28 @@ class InvoiceView extends Component
                     'amount' => $vatAmount,
                 ]);
 
-                if ($invoice) {
-                    $invoice->status = 'invoiced';
-                    $invoice->created_at = now(); // Update created_at with current date
-                    // $invoice->print_count = ($invoice->print_count ?? 0) + 1;
-                    $invoice->save();
+                // Other expenses should already be saved by "Apply Changes" button
+                // No need to duplicate the saving here
 
+                 if ($invoice) {
+                     // Recalculate total amount based on all invoice items (including other expenses)
+                     $allInvoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+                     $allExpensesItems = ExpensesItem::where('invoice_id', $invoice->id)->get();
+                     $totalAmount = $allInvoiceItems->sum('total_price') + $allExpensesItems->sum('total_price') + ($invoice->backed_plates_price * $invoice->order->backing_qty);
+
+                    $invoice->update([
+                        'status' => 'invoiced',
+                        'total_amount' => $totalAmount,
+                        'amount_due' => $totalAmount,
+                        'created_at' => now()
+                    ]);
 
                     $jobOrder->status = 'invoiced';
                     $jobOrder->save();
                 }
 
                 DB::commit();
+
                 session()->flash('success', 'Invoice and accounting entries created successfully!');
                 return $this->redirect('/invoices');
             } else {
@@ -200,7 +334,7 @@ class InvoiceView extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Error creating accounting entries: ' . $e->getMessage());
-            $invoice->delete();
+            // Don't delete the invoice - let the user see the error and fix it
         }
         // Redirect to print preview
         // return $this->redirect('/invoice/print-preview/' . $this->invoiceId, navigate: true);
@@ -326,10 +460,10 @@ class InvoiceView extends Component
         $this->invoice->update(['status' => $this->status]);
     }
 
-    public function exportPDF()
-    {
-        $invoice = Invoice::with('invoiceItems.item')->find($this->invoiceId);
-        $customer = Customer::find($invoice->customer_id);
+     public function exportPDF()
+     {
+         $invoice = Invoice::with(['invoiceItems.item', 'expensesItems.expense'])->find($this->invoiceId);
+         $customer = Customer::find($invoice->customer_id);
 
         // Update print count in the database
         $invoice->increment('print_count'); // Increments the print count by 1
@@ -352,10 +486,10 @@ class InvoiceView extends Component
     }
 
 
-    public function _exportPDF()
-    {
-        $invoice = Invoice::with('invoiceItems.item')->find($this->invoiceId);
-        $customer = Customer::find($invoice->customer_id);
+     public function _exportPDF()
+     {
+         $invoice = Invoice::with(['invoiceItems.item', 'expensesItems.expense'])->find($this->invoiceId);
+         $customer = Customer::find($invoice->customer_id);
         $pdf = Pdf::loadView('livewire.invoice.invoice-pdf', compact('invoice', 'customer'));
 
         // Rename the PDF with invoice number
@@ -368,9 +502,13 @@ class InvoiceView extends Component
 
     public function updateUnitPrice($index)
     {
-        $this->invoiceItems[$index]['total_price']
-            = $this->invoiceItems[$index]['quantity']
-            * $this->invoiceItems[$index]['unit_price'];
+        // Get unit_price and default to 0 if blank or null, then cast to float
+        $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+        $quantity = (float) ($this->invoiceItems[$index]['quantity'] ?? 1);
+
+        // Store back as float to ensure type consistency
+        $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+        $this->invoiceItems[$index]['total_price'] = $quantity * $unitPrice;
 
         $this->calculateTotal();
         $this->checkForChanges();
@@ -378,62 +516,125 @@ class InvoiceView extends Component
 
     public function calculateTotal()
     {
-        // 1) figure out the baked‐plates total from whatever the user last typed
-        $this->backedTotal = $this->backedPrice * $this->backedQty;
+        // 1) figure out the baked‐plates total from whatever the user last typed (cast to float)
+        $this->backedTotal = (float) $this->backedPrice * (float) $this->backedQty;
 
         // 2) line‐item totals
         $lineSum = array_sum(array_column($this->invoiceItems, 'total_price'));
 
-        // 3) grand total = lines + baked‐plates
-        $this->total_amount = number_format($lineSum + $this->backedTotal, 2, '.', '');
+        // Ensure lineSum is numeric
+        $lineSum = is_numeric($lineSum) ? (float) $lineSum : 0.0;
 
-        // (optionally mark “dirty” if you want the Apply button to light up as soon as they type)
-        $this->changesMade = true;
+        // Ensure backedTotal is numeric
+        $this->backedTotal = is_numeric($this->backedTotal) ? (float) $this->backedTotal : 0.0;
+
+        // 3) grand total = lines + baked‐plates (store as numeric value for database)
+        $total = $lineSum + $this->backedTotal;
+        $this->total_amount = round($total, 2);
+
+        // Don't automatically mark as changed - let checkForChanges handle this
     }
 
     public function updateInvoiceItems()
     {
-        $invoice = Invoice::findOrFail($this->invoiceId);
+        try {
+            $invoice = Invoice::findOrFail($this->invoiceId);
 
-        if ($invoice->status !== 'invoicing') {
-            session()->flash('error', 'Only invoices with status "invoicing" can be updated.');
-            return;
-        }
+            if ($invoice->status !== 'invoicing') {
+                session()->flash('error', 'Only invoices with status "invoicing" can be updated.');
+                return;
+            }
 
-        // 1) Update each invoice-item line
-        foreach ($this->invoiceItems as $item) {
-            InvoiceItem::where('id', $item['id'])->update([
-                'unit_price' => $item['unit_price'],
-                'total_price' => $item['total_price'],
+            \Log::info('UpdateInvoiceItems called', [
+                'invoice_id' => $this->invoiceId,
+                'invoice_items_count' => count($this->invoiceItems),
+                'invoice_items' => $this->invoiceItems
+            ]);
+
+            DB::beginTransaction();
+
+            $otherExpensesProcessed = 0;
+            $regularItemsProcessed = 0;
+
+            // 1) Update each existing invoice-item line
+            foreach ($this->invoiceItems as $item) {
+                if (isset($item['id']) && $item['id']) {
+                    // Validate that unit_price is not null or empty
+                    if (!isset($item['unit_price']) || $item['unit_price'] === null || $item['unit_price'] === '') {
+                        continue; // Skip items with blank unit price
+                    }
+
+                    if (isset($item['is_other_expense']) && $item['is_other_expense']) {
+                        // Update existing other expense item
+                        ExpensesItem::where('id', $item['id'])->update([
+                            'expense_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'] ?? 0,
+                        ]);
+                        $otherExpensesProcessed++;
+                    } else {
+                        // Update existing regular invoice item
+                        InvoiceItem::where('id', $item['id'])->update([
+                            'unit_price' => $item['unit_price'],
+                            'total_price' => $item['total_price'] ?? 0,
+                        ]);
+                        $regularItemsProcessed++;
+                    }
+                 }
+            }
+
+            \Log::info('Processing complete', [
+                'regular_items_processed' => $regularItemsProcessed,
+                'other_expenses_processed' => $otherExpensesProcessed
+            ]);
+
+            // 2) Now update the baked-plates price on the invoice
+            $invoice->update([
+                'total_amount' => $this->total_amount,
+                'amount_due' => $this->total_amount,
+                'backed_plates_price' => $this->backedPrice,
+            ]);
+
+            DB::commit();
+            session()->flash('success', 'Invoice updated successfully! Regular items: ' . $regularItemsProcessed . ', Other expenses: ' . $otherExpensesProcessed);
+            $this->changesMade = false;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Error updating invoice: ' . $e->getMessage());
+            \Log::error('UpdateInvoiceItems Error: ' . $e->getMessage(), [
+                'invoice_id' => $this->invoiceId,
+                'invoice_items' => $this->invoiceItems,
+                'trace' => $e->getTraceAsString()
             ]);
         }
-
-        // 2) Now update the baked-plates price on the invoice
-        $invoice->update([
-            'total_amount' => $this->total_amount,
-            'amount_due' => $this->total_amount,
-            'backed_plates_price' => $this->backedPrice,
-        ]);
-
-        session()->flash('success', 'Invoice updated successfully!');
-        $this->changesMade = false;
     }
 
 
 
     public function updatedTotalAmount($value)
     {
-
-        $this->total_amount = number_format($value, 2, '.', '') + $this->backedPrice;
+        // Ensure value is numeric before calculating
+        $numValue = is_numeric($value) ? (float) $value : 0.0;
+        $this->total_amount = round($numValue + (float) $this->backedPrice, 2);
     }
 
     public function updateBackedPrice()
     {
-        // 1) strip commas and cast to float
-        $clean = (float) str_replace(',', '', $this->backedPrice);
+        // 1) strip commas and cast to float, handle empty/null values
+        if (empty($this->backedPrice)) {
+            $clean = 0.0;
+        } else {
+            $cleaned = str_replace(',', '', (string) $this->backedPrice);
+            $clean = (float) $cleaned;
 
-        // 2) re-format with exactly two decimal places
-        $this->backedPrice = number_format($clean, 2, '.', '');
+            // If not a valid number, default to 0
+            if (!is_numeric($clean) || is_nan($clean)) {
+                $clean = 0.0;
+            }
+        }
+
+        // 2) Store as numeric value (not formatted), rounding to 2 decimal places
+        $this->backedPrice = round($clean, 2);
 
         // 3) re-calculate grand total
         $this->calculateTotal();
@@ -470,6 +671,225 @@ class InvoiceView extends Component
         session()->flash('success', 'Customer PO number updated successfully!');
     }
 
+    public function loadAvailableOtherExpenses()
+    {
+        $this->availableOtherExpenses = OtherExpense::orderBy('expense_name')->get()->toArray();
+    }
+
+    public function addSelectedExpenses()
+    {
+        if (empty($this->selectedOtherExpenses)) {
+            session()->flash('error', 'Please select at least one expense to add.');
+            return;
+        }
+
+        \Log::info('Adding selected expenses', [
+            'selected_expenses' => $this->selectedOtherExpenses,
+            'current_invoice_items_count' => count($this->invoiceItems)
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($this->selectedOtherExpenses as $expenseId) {
+                $expense = OtherExpense::find($expenseId);
+                if ($expense) {
+                    // Check if expense is already added in database
+                    $existingExpenseItem = ExpensesItem::where('invoice_id', $this->invoiceId)
+                        ->where('expense_id', $expenseId)
+                        ->first();
+
+                    if (!$existingExpenseItem) {
+                        // Create new expense item in database
+                        $expenseItem = ExpensesItem::create([
+                            'invoice_id' => $this->invoiceId,
+                            'expense_id' => $expense->id,
+                            'expense_price' => $expense->price,
+                            'quantity' => 1,
+                            'total_price' => $expense->price,
+                        ]);
+
+                        // Add to Livewire component array (cast to proper types)
+                        $newItem = [
+                            'id' => $expenseItem->id,
+                            'item_id' => null,
+                            'expense_id' => $expense->id,
+                            'name' => $expense->expense_name,
+                            'unit_price' => (float) ($expense->price ?? 0),
+                            'quantity' => 1,
+                            'total_price' => (float) ($expense->price ?? 0),
+                            'is_other_expense' => true
+                        ];
+
+                        $this->invoiceItems[] = $newItem;
+
+                        \Log::info('Added other expense to database and invoice items', [
+                            'expense_id' => $expense->id,
+                            'expense_name' => $expense->expense_name,
+                            'price' => $expense->price,
+                            'expenses_item_id' => $expenseItem->id
+                        ]);
+                    } else {
+                        \Log::info('Expense already exists in database', ['expense_id' => $expenseId]);
+                    }
+                } else {
+                    \Log::error('Expense not found', ['expense_id' => $expenseId]);
+                }
+            }
+
+            DB::commit();
+
+            $this->selectedOtherExpenses = [];
+            $this->calculateTotal();
+            $this->changesMade = true;
+
+            \Log::info('Finished adding expenses', [
+                'final_invoice_items_count' => count($this->invoiceItems),
+                'changes_made' => $this->changesMade
+            ]);
+
+            session()->flash('success', 'Selected expenses added to invoice successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Error adding expenses: ' . $e->getMessage());
+            \Log::error('Error adding expenses: ' . $e->getMessage(), [
+                'selected_expenses' => $this->selectedOtherExpenses,
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    public function refreshInvoiceItems()
+    {
+        // Re-index the array to ensure proper indexing
+        $this->invoiceItems = array_values($this->invoiceItems);
+    }
+
+    public function removeOtherExpense($index)
+    {
+        if (isset($this->invoiceItems[$index]) && isset($this->invoiceItems[$index]['is_other_expense'])) {
+            unset($this->invoiceItems[$index]);
+            $this->refreshInvoiceItems(); // Use the refresh method
+            $this->calculateTotal();
+            $this->changesMade = true;
+            session()->flash('success', 'Expense removed from invoice successfully!');
+        }
+    }
+
+    public function updateOtherExpenseQuantity($index)
+    {
+        try {
+            // Validate that the index exists and the item is an other expense
+            if (!isset($this->invoiceItems[$index]) || !isset($this->invoiceItems[$index]['is_other_expense'])) {
+                session()->flash('error', 'Invalid item selected for quantity update.');
+                return;
+            }
+
+            $quantity = (int)$this->invoiceItems[$index]['quantity'];
+
+            // Ensure minimum quantity of 1
+            if ($quantity < 1) {
+                $quantity = 1;
+                $this->invoiceItems[$index]['quantity'] = $quantity;
+            }
+
+            // Update total price based on unit price and quantity (cast to float)
+            $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+
+            // Store back as proper types to ensure consistency
+            $this->invoiceItems[$index]['quantity'] = $quantity;
+            $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+            $this->invoiceItems[$index]['total_price'] = $unitPrice * (float) $quantity;
+
+            $this->calculateTotal();
+            $this->changesMade = true;
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating quantity: ' . $e->getMessage());
+        }
+    }
+
+    public function updateOtherExpenseQuantityById($expenseId, $quantity)
+    {
+        try {
+            $quantity = (int)$quantity;
+
+            // Ensure minimum quantity of 1
+            if ($quantity < 1) {
+                $quantity = 1;
+            }
+
+            // Find the item by expense ID and update it
+            foreach ($this->invoiceItems as $index => $item) {
+                if (isset($item['expense_id']) && $item['expense_id'] == $expenseId && isset($item['is_other_expense'])) {
+                    // Update the quantity and total price in the array (cast to float)
+                    $unitPrice = (float) ($this->invoiceItems[$index]['unit_price'] ?? 0);
+
+                    // Store back as proper types
+                    $this->invoiceItems[$index]['quantity'] = $quantity;
+                    $this->invoiceItems[$index]['unit_price'] = $unitPrice;
+                    $this->invoiceItems[$index]['total_price'] = $unitPrice * (float) $quantity;
+
+                    // Update in database if the item has an ID (meaning it's saved)
+                    if (isset($item['id']) && $item['id']) {
+                        ExpensesItem::where('id', $item['id'])->update([
+                            'quantity' => $quantity,
+                            'total_price' => $this->invoiceItems[$index]['total_price']
+                        ]);
+                    }
+
+                    \Log::info('Updated other expense quantity', [
+                        'expense_id' => $expenseId,
+                        'new_quantity' => $quantity,
+                        'unit_price' => $this->invoiceItems[$index]['unit_price'],
+                        'new_total_price' => $this->invoiceItems[$index]['total_price']
+                    ]);
+
+                    $this->calculateTotal();
+                    $this->changesMade = true;
+                    return;
+                }
+            }
+
+            session()->flash('error', 'Expense not found for quantity update.');
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating quantity: ' . $e->getMessage());
+        }
+    }
+
+     public function removeOtherExpenseById($expenseId)
+     {
+         try {
+             // Find and remove the item by expense ID
+             foreach ($this->invoiceItems as $index => $item) {
+                 if (isset($item['expense_id']) && $item['expense_id'] == $expenseId && isset($item['is_other_expense'])) {
+                     // If the item has an ID, it means it was saved to database, so delete it
+                     if (isset($item['id']) && $item['id']) {
+                         ExpensesItem::where('id', $item['id'])->delete();
+                         \Log::info('Removed expense from database', [
+                             'expense_id' => $expenseId,
+                             'expenses_item_id' => $item['id']
+                         ]);
+                     }
+
+                     unset($this->invoiceItems[$index]);
+                     $this->refreshInvoiceItems(); // Use the refresh method
+                     $this->calculateTotal();
+                     $this->changesMade = true;
+                     session()->flash('success', 'Expense removed from invoice successfully!');
+                     return;
+                 }
+             }
+
+             session()->flash('error', 'Expense not found for removal.');
+
+         } catch (\Exception $e) {
+             session()->flash('error', 'Error removing expense: ' . $e->getMessage());
+         }
+     }
+
     public function render()
     {
 
@@ -478,6 +898,10 @@ class InvoiceView extends Component
                 $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
         :class="{\'dark bg-gray-900\': darkMode === true}"';
 
-        return view('livewire.invoice.invoice-view', ['invoice' => $this->invoice, 'invoiceItems' => $this->invoiceItems])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
+        return view('livewire.invoice.invoice-view', [
+            'invoice' => $this->invoice,
+            'invoiceItems' => $this->invoiceItems,
+            'availableOtherExpenses' => $this->availableOtherExpenses
+        ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
     }
 }

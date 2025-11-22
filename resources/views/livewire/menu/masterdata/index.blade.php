@@ -1,5 +1,6 @@
             <!-- Menu Group -->
             <div>
+                @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing'|| auth()->user()->mode === 'accounts')
                 <h3 class="mb-1 text-xs uppercase leading-[20px] text-gray-400">
                     <span class="menu-group-title" :class="sidebarToggle ? 'lg:hidden' : ''">
                         MASTER DATA
@@ -13,6 +14,7 @@
                             fill="" />
                     </svg> --}}
                 </h3>
+                @endif
 
                 <ul class="mb-1 flex flex-col">
                     <!-- Menu Item Supplier -->

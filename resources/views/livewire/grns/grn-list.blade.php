@@ -152,83 +152,83 @@
                 </div>
 
                 <div class="custom-scrollbar max-w-full overflow-x-auto px-5 sm:px-6">
-                    <table class="min-w-full">
-                        <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
+                    <table class="min-w-full border border-gray-300 dark:border-gray-600">
+                        <thead class="border bg-gray-200 text-gray-700 border-gray-100 py-2 dark:border-gray-600 dark:bg-gray-900">
                             <tr>
-                                <th class="py-2 font-normal whitespace-nowrap" wire:click="sortBy('id')">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600" wire:click="sortBy('id')">
                                     <div class="flex items-center">
-                                        <p class="text-theme-xs text-gray-500 dark:text-gray-400">GRN ID</p>
+                                        <p class="text-theme-xs text-gray-500 ml-2 dark:text-gray-400">GRN ID</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap" wire:click="sortBy('id')">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600" wire:click="sortBy('id')">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">Created By</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap" wire:click="sortBy('id')">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600" wire:click="sortBy('id')">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">Created</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">GRN Number</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">PO Number</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">Supplier</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">Total Amount (Rs)</p>
                                     </div>
                                 </th>
-                                <th class="py-2 font-normal whitespace-nowrap">
+                                <th class="py-2 font-normal whitespace-nowrap  border-gray-200 dark:border-gray-600">
                                     <div class="flex items-center">
                                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">Status</p>
                                     </div>
                                 </th>
                                 <th class="py-2 font-normal whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <p class="text-theme-xs text-gray-500 dark:text-gray-400">Actions</p>
+                                        <p class="text-theme-xs text-gray-500 dark:text-gray-400 mr-2">Actions</p>
                                     </div>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                            @foreach ($grns as $grn)
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-600 dark:bg-gray-700">
+                            @forelse ($grns as $grn)
                                 <tr class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs ml-2 text-gray-700 dark:text-gray-300">
                                                 {{ $grn->id }}
                                             </p>
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                                 {{ $grn->user->name }}
                                             </p>
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                                 {{ $grn->created_at }}
                                             </p>
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                                 <a wire:navigate href="{{ route('grn.items.view', $grn->id) }}"
                                                     style="color: oklch(0.443 0.11 240.79)">
                                                     {{ $grn->grn_code }} </a>
@@ -237,7 +237,7 @@
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                                 <a wire:navigate href="{{ route('grn.items.view', $grn->id) }}"
                                                     style="color: oklch(0.443 0.11 240.79)">
                                                     {{ $grn->delivery_remark }} </a>
@@ -246,21 +246,21 @@
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                             {{ $grn->supplier?->name ?? 'N/A' }}
                                             </p>
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                                 {{ number_format($grn->total_amount, 2) }} Rs
                                             </p>
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap">
                                         <div class="flex items-center ">
-                                            <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <p class="text-theme-xs text-gray-700 dark:text-gray-300">
                                             @if ($grn->status === 'pending')
                                                     <span
                                                         class="inline-flex items-center justify-center gap-1 rounded-full bg-warning-50 px-2.5 py-0.5 text-xs font-medium text-warning-600 dark:bg-warning-500/15 dark:text-orange-400">
@@ -286,7 +286,7 @@
                                         </div>
                                     </td>
                                     <td class="py-1 whitespace-nowrap" style="width: 5%">
-                                        <div class="flex items-center justify-start">
+                                        <div class="flex items-center justify-start mr-2">
                                             <a href="{{ route('grn.items.view', $grn->id) }}" wire:navigate
                                                 class="text-gray-400 hover:text-gray-800 dark:text-gray-400 dark:hover:text-blue-500"
                                                 title="View">
@@ -396,13 +396,25 @@
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="py-8 text-center">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <svg class="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">No GRN available</p>
+                                            <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">There are no GRNs to display at the moment</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                <div class="flex justify-between items-center border-t px-6 py-4 dark:border-gray-800">
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex justify-between items-center border-t mt-5 px-6 py-4 dark:border-gray-600">
+                    <div class="text-sm text-gray-600 dark:text-gray-300">
                         Showing {{ $grns->firstItem() }} to {{ $grns->lastItem() }} of
                         {{ $grns->total() }} entries
                     </div>
