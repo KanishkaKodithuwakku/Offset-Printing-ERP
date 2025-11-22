@@ -48,7 +48,7 @@
 
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Bill Deletion Approvals
+                Vendor Bill Approvals
             </h3>
             @if (!empty($selectedApprovals))
                 <div class="flex gap-2">
