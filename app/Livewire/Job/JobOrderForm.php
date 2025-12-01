@@ -130,8 +130,18 @@ class JobOrderForm extends Component
             $dispatchedCount = DB::table('dispatch_items')
                 ->where('order_id', $jobOrderId)
                 ->sum('quantity');
-            $this->dispatchedCount = $dispatchedCount;
-            $this->hasDispatchedItems = $dispatchedCount > 0;
+            $this->dispatchedCount = (int)$dispatchedCount;
+            $this->hasDispatchedItems = $this->dispatchedCount > 0;
+            
+            // Update debug log with correct values
+            Log::channel('job_order_log')->debug('JobOrderForm mount - After checking dispatched items', [
+                'job_order_id' => $jobOrderId,
+                'status' => $this->status,
+                'previous_status' => $this->previous_status,
+                'dispatchedCount' => $this->dispatchedCount,
+                'hasDispatchedItems' => $this->hasDispatchedItems,
+                'user_mode' => $this->authUser->mode
+            ]);
 
             // Check if there's a pending quantity update request
             $this->hasPendingQtyUpdateRequest = DB::table('job_orders')
