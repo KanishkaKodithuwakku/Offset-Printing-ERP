@@ -81,7 +81,7 @@ class JobOrderView extends Component
             // Check and update dispatch status if all items are fully dispatched
             $this->checkAndUpdateDispatchStatus($jobOrderId);
             // Reload job order to get updated status
-            $this->jobOrder = JobOrder::with('customer', 'user', 'jobDoneBy', 'jobCheckedBy')->find($jobOrderId);
+            $this->jobOrder->refresh();
             $this->status = $this->jobOrder->status;
             $this->statusText = StatusHelper::getJobOrderStatus($this->jobOrder->status);
             
