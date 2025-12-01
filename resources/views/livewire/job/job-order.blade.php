@@ -628,13 +628,14 @@
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-3">
                 <div class="flex justify-between items-center mb-3">
                     <h4>Dispatched Items</h4>
-                    {{-- Show button if there are dispatched items and job order is in dispatchable state --}}
+                    {{-- Show button if there are dispatched items (count > 0) and job order is in dispatchable state --}}
                     @php
                         $currentStatus = $status ?? '';
                         $prevStatus = $previous_status ?? '';
                         $isValidStatus = in_array($currentStatus, ['dispatching', 'printing', 'paused']);
                         $wasValidStatus = in_array($prevStatus, ['dispatching', 'printing']);
-                        $canShowButton = $hasDispatchedItems && ($isValidStatus || $wasValidStatus);
+                        $hasDispatchedQty = ($dispatchedCount ?? 0) > 0;
+                        $canShowButton = $hasDispatchedQty && $hasDispatchedItems && ($isValidStatus || $wasValidStatus);
                     @endphp
                     @if ($canShowButton)
                         @if ($authUser->mode === 'admin')

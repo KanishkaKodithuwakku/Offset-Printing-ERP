@@ -46,11 +46,11 @@ class DispatchItem extends Component
         // dd($orderId);
         $this->authUser = auth()->user();
         if ($orderId) {
-        // Check if there are dispatched items
-        $dispatchedCount = DB::table('dispatch_items')
-            ->where('order_id', $orderId)
-            ->sum('quantity');
-        $this->hasDispatchedItems = $dispatchedCount > 0;
+            // Check if there are dispatched items (must be > 0)
+            $dispatchedCount = DB::table('dispatch_items')
+                ->where('order_id', $orderId)
+                ->sum('quantity');
+            $this->hasDispatchedItems = ((int)$dispatchedCount) > 0;
         
         // Check if there's a pending quantity update request
         $this->hasPendingQtyUpdateRequest = DB::table('job_orders')
