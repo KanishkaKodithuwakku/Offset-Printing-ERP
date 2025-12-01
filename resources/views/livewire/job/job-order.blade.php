@@ -26,6 +26,34 @@
     </div>
     @endif
 
+    {{-- Information note for admin about pending dispatch request --}}
+    @if ($hasPendingQtyUpdateRequest && $authUser->mode === 'admin' && $jobOrderId)
+    <div class="p-10 py-3 px-6">
+        <div class="rounded-xl border border-brand-500 bg-brand-50 p-4 dark:border-brand-500/30 dark:bg-brand-500/15">
+            <div class="flex items-start gap-3">
+                <div class="-mt-0.5 text-brand-500">
+                    <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+                            fill="#3B82F6"></path>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">
+                        Pending Dispatch Request
+                    </h4>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        A dispatch user has requested to complete the dispatch with current dispatched quantity. Please review the quantities and click the <strong>"Save Order"</strong> button to approve this request.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @if ($errors->any())
     <div class="alert alert-danger">
         <ul>

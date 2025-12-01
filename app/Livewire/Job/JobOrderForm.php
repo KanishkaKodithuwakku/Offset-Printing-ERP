@@ -680,6 +680,56 @@ class JobOrderForm extends Component
                 ]);
             }
 
+            // Check if any item remaining quantity becomes 0 (all items dispatched) before saving
+            $allItemsDispatched = false;
+            if ($this->jobOrderId) {
+                foreach ($this->jobOrderItems as $item) {
+                    // Get dispatched count for the item
+                    $dispatchedCount = DB::table('dispatch_items')
+                        ->where('order_id', $jobOrder->id)
+                        ->where('item_id', $item['item_id'])
+                        ->sum('quantity');
+
+                    // Get job order item count
+                    $jobOrderItemCount = JobOrderItem::where('order_id', $jobOrder->id)->where('item_id', $item['item_id'])->value('quantity');
+
+                    // Calculate final quantity based on the form input
+                    $quantity = $item['quantity'];
+                    if (($jobOrderItemCount ?? 0) - $dispatchedCount != $item['quantity']) {
+                        if ($item['quantity'] >= 0) {
+                            $quantity = $item['quantity'] + $dispatchedCount;
+                        } else {
+                            $currentRemaining = ($jobOrderItemCount ?? 0) - $dispatchedCount;
+                            $newRemaining = $currentRemaining + $item['quantity'];
+                            $quantity = $newRemaining + $dispatchedCount;
+                        }
+                    } else {
+                        $quantity = $jobOrderItemCount;
+                    }
+
+                    // Check if remaining quantity becomes 0 (all items dispatched)
+                    // Remaining = final quantity - dispatched count
+                    $remainingQty = $quantity - $dispatchedCount;
+                    if ($remainingQty == 0 && $dispatchedCount > 0) {
+                        $allItemsDispatched = true;
+                        break;
+                    }
+                }
+
+                // If all items are dispatched, show modal instead of saving
+                if ($allItemsDispatched) {
+                    if ($this->authUser->mode === 'dispatch') {
+                        // Show request modal for dispatch users
+                        $this->showRequestQtyModal = true;
+                        return;
+                    } elseif ($this->authUser->mode === 'admin') {
+                        // Show update modal for admin users
+                        $this->showUpdateQtyModal = true;
+                        return;
+                    }
+                }
+            }
+
             // Validate and save items
             foreach ($this->jobOrderItems as $item) {
 
