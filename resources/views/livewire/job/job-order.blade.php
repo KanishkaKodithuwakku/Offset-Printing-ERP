@@ -628,13 +628,6 @@
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-3">
                 <div class="flex justify-between items-center mb-3">
                     <h4>Dispatched Items</h4>
-                    {{-- Debug info - remove after fixing --}}
-                    <div class="text-xs text-gray-500 mb-2">
-                        Debug: Status={{ $status ?? 'null' }}, Prev={{ $previous_status ?? 'null' }}, 
-                        HasDisp={{ $hasDispatchedItems ? 'yes' : 'no' }}, 
-                        Count={{ $dispatchedCount ?? 0 }}, 
-                        Role={{ $authUser->mode ?? 'null' }}
-                    </div>
                     {{-- Show button if there are dispatched items and job order is in dispatchable state --}}
                     @php
                         $currentStatus = $status ?? '';
@@ -671,7 +664,7 @@
                             @else
                                 <button wire:click="requestQtyUpdateToAdmin({{ $jobOrderId }})"
                                     wire:confirm="Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?"
-                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-info-500 shadow-theme-xs hover:bg-info-600">
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
                                     <svg class="w-4 h-4 text-white" aria-hidden="true"
                                         xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                         viewBox="0 0 24 24">

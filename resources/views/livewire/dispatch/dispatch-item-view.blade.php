@@ -341,9 +341,9 @@
                             Request Pending
                         </button>
                     @else
-                        <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})"
-                            wire:confirm="Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?"
-                            class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-info-500 shadow-theme-xs hover:bg-info-600">
+                                <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})"
+                                    wire:confirm="Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?"
+                                    class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
                             <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
                                 xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                 viewBox="0 0 24 24">
