@@ -315,7 +315,7 @@
                 </button>
             {{-- @endif --}}
 
-            @if (($dispatchStatus === 'dispatching' || $status === 'dispatching') && $hasDispatchedItems)
+            @if (($dispatchStatus === 'dispatching' || $status === 'dispatching') && $hasDispatchedItems && !$isFullyDispatched)
                 @if ($authUser->mode === 'admin')
                     <button wire:click="updateJobOrderQuantityToDispatched({{ $jobOrder->id }})"
                         wire:confirm="Are you sure you want to update the job order quantity to match the dispatched quantity? This will remove any remaining balance from the job order."

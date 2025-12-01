@@ -32,6 +32,7 @@ class DispatchItem extends Component
     public $dispatchStatus;
     public $hasDispatchedItems = false;
     public $hasPendingQtyUpdateRequest = false;
+    public $isFullyDispatched = false;
 
     protected $rules = [
         'item_id' => 'required|exists:items,id',
@@ -84,6 +85,9 @@ class DispatchItem extends Component
                 ->where('order_id', $this->jobOrderId)
                 ->sum('quantity');
             $this->hasDispatchedItems = $dispatchedCount > 0;
+
+            // Check if all items are fully dispatched
+            $this->isFullyDispatched = $this->checkIfFullyDispatched($this->jobOrderId);
 
             // Check if there's a pending quantity update request
             $this->hasPendingQtyUpdateRequest = DB::table('job_orders')
@@ -494,6 +498,31 @@ class DispatchItem extends Component
     public function dispatchPrintPreview($dispatchNoteId)
     {
         return redirect()->route('dispatch-note.print-preview', ['dispatchNoteId' => $dispatchNoteId]);
+    }
+
+    /**
+     * Check if all job order items are fully dispatched
+     */
+    private function checkIfFullyDispatched($orderId)
+    {
+        $jobOrderItems = JobOrderItem::where('order_id', $orderId)->get();
+        
+        if ($jobOrderItems->isEmpty()) {
+            return false;
+        }
+
+        foreach ($jobOrderItems as $jobOrderItem) {
+            $dispatchedQty = DB::table('dispatch_items')
+                ->where('job_order_item_id', $jobOrderItem->id)
+                ->sum('quantity');
+            
+            // If any item is not fully dispatched, return false
+            if ($dispatchedQty < $jobOrderItem->quantity) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
