@@ -655,15 +655,20 @@ class JobOrderForm extends Component
                         $quantity = $jobOrderItemCount + $item['quantity'];
                     }
 
-                    // Validate that total price matches price * quantity
+                    // Calculate and validate that total price matches price * quantity
                     $expectedTotal = abs($quantity * $item['selling_price']);
                     $providedTotal = abs($item['total']);
                     
-                    // Allow small floating point differences (0.01)
+                    // Check if there's a mismatch (allow small floating point differences of 0.01)
                     if (abs($expectedTotal - $providedTotal) > 0.01) {
                         $itemName = $item['name'] ?? 'Item';
-                        session()->flash('error', "Total price mismatch for '{$itemName}'. Expected: " . number_format($expectedTotal, 2) . ", Provided: " . number_format($providedTotal, 2) . ". Total should be: Price × Quantity = " . number_format($item['selling_price'], 2) . " × " . $quantity . " = " . number_format($expectedTotal, 2));
-                        return;
+                        // Build a clearer message explaining the calculation
+                        $quantityInfo = '';
+                        if ($jobOrderItemCount > 0) {
+                            $quantityInfo = " (Existing: {$jobOrderItemCount} + Entered: {$item['quantity']} = Final: {$quantity})";
+                        }
+                        // Show a warning but continue - the correct total will be saved
+                        session()->flash('warning', "Total price auto-corrected for '{$itemName}'. Provided: " . number_format($providedTotal, 2) . ", Corrected to: " . number_format($expectedTotal, 2) . " based on Price × Final Quantity = " . number_format($item['selling_price'], 2) . " × " . $quantity . $quantityInfo);
                     }
 
                     try {
