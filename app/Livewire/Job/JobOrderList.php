@@ -5,7 +5,9 @@ namespace App\Livewire\Job;
 use App\Models\User;
 use Livewire\Component;
 use App\Models\JobOrder;
+use App\Models\JobOrderItem;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\DB;
 
 class JobOrderList extends Component
 {
@@ -89,8 +91,30 @@ class JobOrderList extends Component
         return $this->redirect('/job-orders', navigate: true);
     }
 
+    /**
+     * Check if all job order items are fully dispatched
+     */
+    private function checkIfFullyDispatched($orderId)
+    {
+        $jobOrderItems = JobOrderItem::where('order_id', $orderId)->get();
+        
+        if ($jobOrderItems->isEmpty()) {
+            return false;
+        }
 
+        foreach ($jobOrderItems as $jobOrderItem) {
+            $dispatchedQty = DB::table('dispatch_items')
+                ->where('job_order_item_id', $jobOrderItem->id)
+                ->sum('quantity');
+            
+            // If any item is not fully dispatched, return false
+            if ($dispatchedQty < $jobOrderItem->quantity) {
+                return false;
+            }
+        }
 
+        return true;
+    }
 
     public function render()
     {
@@ -182,6 +206,12 @@ class JobOrderList extends Component
             $jobOrdersQuery->orderBy('created_at', 'desc');
         }
         $jobOrders = $jobOrdersQuery->paginate(perPage: 25);
+
+        // Add isFullyDispatched flag to each job order for the view
+        $jobOrders->getCollection()->transform(function ($jobOrder) {
+            $jobOrder->isFullyDispatched = $this->checkIfFullyDispatched($jobOrder->id);
+            return $jobOrder;
+        });
 
         $bodyAttributes = 'x-data="{ page: \'jobOrderList\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
             x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
