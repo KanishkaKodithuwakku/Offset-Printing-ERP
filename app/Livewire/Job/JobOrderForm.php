@@ -627,7 +627,7 @@ class JobOrderForm extends Component
 
                 // Get dispatched count for the item
                 $dispatchedCount = DB::table('dispatch_items')
-                    ->where('order_id', $this->jobOrderId)
+                    ->where('order_id', $jobOrder->id)
                     ->where('item_id', $item['item_id'])
                     ->sum('quantity');
 
@@ -655,6 +655,17 @@ class JobOrderForm extends Component
                         $quantity = $jobOrderItemCount + $item['quantity'];
                     }
 
+                    // Validate that total price matches price * quantity
+                    $expectedTotal = abs($quantity * $item['selling_price']);
+                    $providedTotal = abs($item['total']);
+                    
+                    // Allow small floating point differences (0.01)
+                    if (abs($expectedTotal - $providedTotal) > 0.01) {
+                        $itemName = $item['name'] ?? 'Item';
+                        session()->flash('error', "Total price mismatch for '{$itemName}'. Expected: " . number_format($expectedTotal, 2) . ", Provided: " . number_format($providedTotal, 2) . ". Total should be: Price × Quantity = " . number_format($item['selling_price'], 2) . " × " . $quantity . " = " . number_format($expectedTotal, 2));
+                        return;
+                    }
+
                     try {
                         $jobOrderItem = JobOrderItem::updateOrCreate([
                             'order_id' => $jobOrder->id,
@@ -662,7 +673,7 @@ class JobOrderForm extends Component
                         ], [
                             'quantity' => $quantity,
                             'price' => $item['selling_price'],
-                            'total' => $item['total'],
+                            'total' => $expectedTotal, // Use calculated total instead of provided total
                         ]);
                         // Optional: Log or debug to check if it worked
                         Log::info('JobOrderItem saved/updated', [
