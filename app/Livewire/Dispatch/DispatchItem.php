@@ -30,6 +30,7 @@ class DispatchItem extends Component
     public $customer_id, $payment_method, $customer_name;
     public $dispatchItems = [];
     public $dispatchStatus;
+    public $hasDispatchedItems = false;
 
     protected $rules = [
         'item_id' => 'required|exists:items,id',
@@ -44,6 +45,12 @@ class DispatchItem extends Component
         // dd($orderId);
         $this->authUser = auth()->user();
         if ($orderId) {
+            // Check if there are dispatched items
+            $dispatchedCount = DB::table('dispatch_items')
+                ->where('order_id', $orderId)
+                ->sum('quantity');
+            $this->hasDispatchedItems = $dispatchedCount > 0;
+            
             // $this->dispatch_id = $dispatchId;
             $this->loadOrderDetails($orderId);
         }
@@ -64,6 +71,12 @@ class DispatchItem extends Component
             $this->status = $this->jobOrder->status;
             $this->customer_name = $this->jobOrder->customer->name;
             $this->dispatchStatus = $this->jobOrder->status;
+
+            // Check if there are dispatched items
+            $dispatchedCount = DB::table('dispatch_items')
+                ->where('order_id', $this->jobOrderId)
+                ->sum('quantity');
+            $this->hasDispatchedItems = $dispatchedCount > 0;
 
             //Load dispatch items with remaining balance
             $this->dispatchItems = [];
@@ -464,9 +477,80 @@ class DispatchItem extends Component
         return $dispatchBalance;
     }
 
+
     public function dispatchPrintPreview($dispatchNoteId)
     {
         return redirect()->route('dispatch-note.print-preview', ['dispatchNoteId' => $dispatchNoteId]);
+    }
+
+    /**
+     * Update job order item quantity to match dispatched quantity
+     * This removes the remaining balance from the job order
+     */
+    public function updateJobOrderQuantityToDispatched($orderId)
+    {
+        DB::beginTransaction();
+        
+        try {
+            $jobOrder = JobOrder::with('orderItems')->find($orderId);
+            
+            if (!$jobOrder) {
+                session()->flash('error', 'Job order not found.');
+                return redirect()->back();
+            }
+
+            $totalAmount = 0;
+            $allItemsFullyDispatched = true;
+
+            // Loop through all job order items
+            foreach ($jobOrder->orderItems as $jobOrderItem) {
+                // Get total dispatched quantity for this item
+                $dispatchedQty = ModelsDispatchItem::where('job_order_item_id', $jobOrderItem->id)
+                    ->sum('quantity');
+
+                // Only update if there's a dispatched quantity
+                if ($dispatchedQty > 0) {
+                    // Update the job order item quantity to match dispatched quantity
+                    $jobOrderItem->quantity = $dispatchedQty;
+                    $jobOrderItem->total = $jobOrderItem->price * $dispatchedQty;
+                    $jobOrderItem->status = 'dispatched';
+                    $jobOrderItem->save();
+
+                    $totalAmount += $jobOrderItem->total;
+                } else {
+                    // If no items dispatched, mark as not fully dispatched
+                    $allItemsFullyDispatched = false;
+                }
+            }
+
+            // Update job order total amount
+            $jobOrder->total_amount = $totalAmount;
+            $jobOrder->save();
+
+            // Update dispatch status
+            $jobOrder->fresh();
+            $jobOrder->updateDispatchStatus();
+
+            // Update all dispatch items status to 'dispatched'
+            ModelsDispatchItem::where('order_id', $orderId)
+                ->update(['status' => 'dispatched']);
+
+            // Update all dispatch notes status
+            DispatchNote::where('job_order_id', $orderId)
+                ->update(['status' => 'dispatched']);
+
+            DB::commit();
+
+            // Reload order details
+            $this->loadOrderDetails($orderId);
+
+            session()->flash('success', 'Job order quantity updated to match dispatched quantity successfully.');
+            return $this->redirect("/job-order/{$orderId}", navigate: true);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Failed to update job order quantity: ' . $e->getMessage());
+            return redirect()->back();
+        }
     }
 
     public function render()
