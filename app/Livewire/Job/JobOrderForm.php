@@ -686,52 +686,65 @@ class JobOrderForm extends Component
             }
 
             // Check if any item remaining quantity becomes 0 (all items dispatched) before saving
-            // Skip this check if admin has already approved the request (qtyUpdateApproved = true)
+            // Skip this check if:
+            // 1. Admin has already approved the request (qtyUpdateApproved = true), OR
+            // 2. There's no pending request (hasPendingQtyUpdateRequest = false)
             $allItemsDispatched = false;
-            if ($this->jobOrderId && !($this->authUser->mode === 'admin' && $this->qtyUpdateApproved)) {
-                foreach ($this->jobOrderItems as $item) {
-                    // Get dispatched count for the item
-                    $dispatchedCount = DB::table('dispatch_items')
-                        ->where('order_id', $jobOrder->id)
-                        ->where('item_id', $item['item_id'])
-                        ->sum('quantity');
-
-                    // Get job order item count
-                    $jobOrderItemCount = JobOrderItem::where('order_id', $jobOrder->id)->where('item_id', $item['item_id'])->value('quantity');
-
-                    // Calculate final quantity based on the form input
-                    $quantity = $item['quantity'];
-                    if (($jobOrderItemCount ?? 0) - $dispatchedCount != $item['quantity']) {
-                        if ($item['quantity'] >= 0) {
-                            $quantity = $item['quantity'] + $dispatchedCount;
-                        } else {
-                            $currentRemaining = ($jobOrderItemCount ?? 0) - $dispatchedCount;
-                            $newRemaining = $currentRemaining + $item['quantity'];
-                            $quantity = $newRemaining + $dispatchedCount;
-                        }
-                    } else {
-                        $quantity = $jobOrderItemCount;
-                    }
-
-                    // Check if remaining quantity becomes 0 (all items dispatched)
-                    // Remaining = final quantity - dispatched count
-                    $remainingQty = $quantity - $dispatchedCount;
-                    if ($remainingQty == 0 && $dispatchedCount > 0) {
-                        $allItemsDispatched = true;
-                        break;
+            $shouldCheckModal = true;
+            
+            if ($this->jobOrderId) {
+                // Skip modal check if admin has already approved OR if there's no pending request
+                if ($this->authUser->mode === 'admin') {
+                    if ($this->qtyUpdateApproved || !$this->hasPendingQtyUpdateRequest) {
+                        $shouldCheckModal = false;
                     }
                 }
+                
+                if ($shouldCheckModal) {
+                    foreach ($this->jobOrderItems as $item) {
+                        // Get dispatched count for the item
+                        $dispatchedCount = DB::table('dispatch_items')
+                            ->where('order_id', $jobOrder->id)
+                            ->where('item_id', $item['item_id'])
+                            ->sum('quantity');
 
-                // If all items are dispatched, show modal instead of saving
-                if ($allItemsDispatched) {
-                    if ($this->authUser->mode === 'dispatch') {
-                        // Show request modal for dispatch users
-                        $this->showRequestQtyModal = true;
-                        return;
-                    } elseif ($this->authUser->mode === 'admin') {
-                        // Show update modal for admin users
-                        $this->showUpdateQtyModal = true;
-                        return;
+                        // Get job order item count
+                        $jobOrderItemCount = JobOrderItem::where('order_id', $jobOrder->id)->where('item_id', $item['item_id'])->value('quantity');
+
+                        // Calculate final quantity based on the form input
+                        $quantity = $item['quantity'];
+                        if (($jobOrderItemCount ?? 0) - $dispatchedCount != $item['quantity']) {
+                            if ($item['quantity'] >= 0) {
+                                $quantity = $item['quantity'] + $dispatchedCount;
+                            } else {
+                                $currentRemaining = ($jobOrderItemCount ?? 0) - $dispatchedCount;
+                                $newRemaining = $currentRemaining + $item['quantity'];
+                                $quantity = $newRemaining + $dispatchedCount;
+                            }
+                        } else {
+                            $quantity = $jobOrderItemCount;
+                        }
+
+                        // Check if remaining quantity becomes 0 (all items dispatched)
+                        // Remaining = final quantity - dispatched count
+                        $remainingQty = $quantity - $dispatchedCount;
+                        if ($remainingQty == 0 && $dispatchedCount > 0) {
+                            $allItemsDispatched = true;
+                            break;
+                        }
+                    }
+
+                    // If all items are dispatched, show modal instead of saving
+                    if ($allItemsDispatched) {
+                        if ($this->authUser->mode === 'dispatch') {
+                            // Show request modal for dispatch users
+                            $this->showRequestQtyModal = true;
+                            return;
+                        } elseif ($this->authUser->mode === 'admin') {
+                            // Show update modal for admin users
+                            $this->showUpdateQtyModal = true;
+                            return;
+                        }
                     }
                 }
             }
@@ -1284,8 +1297,24 @@ class JobOrderForm extends Component
             $this->showUpdateQtyModal = false;
             $this->qtyUpdateApproved = true; // Mark as approved to enable Save Order button
 
-            // Refresh the component
-            $this->mount($jobOrderId);
+            // Don't call mount() as it resets qtyUpdateApproved
+            // Just reload the necessary data
+            $this->dispatchedItems = DispatchItem::with('item')
+                ->where('order_id', $jobOrderId)
+                ->get();
+            
+            // Reload job order to get updated status
+            $jobOrder = JobOrder::with('orderItems', 'customer', 'orderItems.item')->find($jobOrderId);
+            $this->status = $jobOrder->status;
+            $this->previous_status = $jobOrder->previous_status;
+            
+            // Recalculate dispatched count
+            $dispatchedCount = DB::table('dispatch_items')
+                ->where('order_id', $jobOrderId)
+                ->sum('quantity');
+            $this->dispatchedCount = (int)$dispatchedCount;
+            $this->hasDispatchedItems = $this->dispatchedCount > 0;
+            $this->isFullyDispatched = $this->checkIfFullyDispatched($jobOrderId);
 
             session()->flash('success', 'Job order quantity updated to match dispatched quantity successfully.');
         } catch (\Exception $e) {
