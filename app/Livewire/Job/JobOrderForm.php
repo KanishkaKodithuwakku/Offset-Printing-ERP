@@ -109,7 +109,17 @@ class JobOrderForm extends Component
             }
             
             // Store previous_status for view condition
-            $this->previous_status = $jobOrder->previous_status ?? $jobOrder->status;
+            // When status is changed to 'paused', previous_status is set above
+            $this->previous_status = $jobOrder->previous_status;
+            
+            // Debug: Log the status values for troubleshooting
+            Log::channel('job_order_log')->debug('JobOrderForm mount - Status values', [
+                'job_order_id' => $jobOrderId,
+                'status' => $this->status,
+                'previous_status' => $this->previous_status,
+                'hasDispatchedItems' => $this->hasDispatchedItems,
+                'user_mode' => $this->authUser->mode
+            ]);
 
             //gete teh dispatched items
             $this->dispatchedItems = DispatchItem::with('item')
@@ -120,6 +130,7 @@ class JobOrderForm extends Component
             $dispatchedCount = DB::table('dispatch_items')
                 ->where('order_id', $jobOrderId)
                 ->sum('quantity');
+            $this->dispatchedCount = $dispatchedCount;
             $this->hasDispatchedItems = $dispatchedCount > 0;
 
             // Check if there's a pending quantity update request

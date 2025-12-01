@@ -628,7 +628,8 @@
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-3">
                 <div class="flex justify-between items-center mb-3">
                     <h4>Dispatched Items</h4>
-                    @if (($status === 'dispatching' || $status === 'printing' || $status === 'paused' || $previous_status === 'dispatching' || $previous_status === 'printing') && $hasDispatchedItems)
+                    {{-- Show button if there are dispatched items and job order is in dispatchable state --}}
+                    @if ($hasDispatchedItems && ($status === 'dispatching' || $status === 'printing' || $status === 'paused' || ($previous_status === 'dispatching') || ($previous_status === 'printing')))
                         @if ($authUser->mode === 'admin')
                             <button wire:click="updateJobOrderQuantityToDispatched({{ $jobOrderId }})"
                                 wire:confirm="Are you sure you want to update the job order quantity to match the dispatched quantity? This will remove any remaining balance from the job order."
