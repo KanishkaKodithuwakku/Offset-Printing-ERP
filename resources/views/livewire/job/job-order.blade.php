@@ -638,17 +638,43 @@
                         // Don't show button if all items are fully dispatched
                         $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus);
                     @endphp
-                    @if ($canShowButton && $authUser->mode === 'admin')
-                        <button wire:click="$set('showUpdateQtyModal', true)"
-                            class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
-                            <svg class="w-4 h-4 text-white" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
-                            </svg>
-                            Update Qty to Dispatched
-                        </button>
+                    @if ($canShowButton)
+                        @if ($authUser->mode === 'admin')
+                            <button wire:click="$set('showUpdateQtyModal', true)"
+                                class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                                <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                    viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
+                                </svg>
+                                Update Qty to Dispatched
+                            </button>
+                        @elseif ($authUser->mode === 'dispatch')
+                            @if ($hasPendingQtyUpdateRequest)
+                                <button disabled
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
+                                    <svg class="w-4 h-4" aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    Request Pending
+                                </button>
+                            @else
+                                <button wire:click="$set('showRequestQtyModal', true)"
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                                    <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Request Admin to Update Qty
+                                </button>
+                            @endif
+                        @endif
                     @endif
                 </div>
                 <table class="min-w-full">
