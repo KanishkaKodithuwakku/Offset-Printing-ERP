@@ -41,6 +41,7 @@ class JobOrderForm extends Component
     public $isFullyDispatched = false;
     public $showUpdateQtyModal = false;
     public $showRequestQtyModal = false;
+    public $showRequestSuccessModal = false;
 
     protected $rules = [
         'customer_id' => 'required|exists:customers,id',
@@ -1177,12 +1178,20 @@ class JobOrderForm extends Component
 
             $this->hasPendingQtyUpdateRequest = true;
             $this->showRequestQtyModal = false;
-
-            session()->flash('success', 'Request sent to admin for quantity update approval.');
+            $this->showRequestSuccessModal = true;
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to send request: ' . $e->getMessage());
             $this->showRequestQtyModal = false;
         }
+    }
+
+    /**
+     * Handle redirect to job order list after success modal
+     */
+    public function redirectToJobOrderList()
+    {
+        $this->showRequestSuccessModal = false;
+        return $this->redirect('/job-orders', navigate: true);
     }
 
     /**
