@@ -39,6 +39,8 @@ class JobOrderForm extends Component
     public $hasDispatchedItems = false;
     public $hasPendingQtyUpdateRequest = false;
     public $isFullyDispatched = false;
+    public $showUpdateQtyModal = false;
+    public $showRequestQtyModal = false;
 
     protected $rules = [
         'customer_id' => 'required|exists:customers,id',
@@ -511,10 +513,11 @@ class JobOrderForm extends Component
                 }
             }
 
-            // If all items are fully dispatched and current status is 'dispatching', update to 'dispatched'
+            // If all items are fully dispatched and current status is 'dispatching' or 'paused', update to 'dispatched'
             if ($allItemsFullyDispatched) {
                 $jobOrder = JobOrder::find($jobOrderId);
-                if ($jobOrder && $jobOrder->status === 'dispatching') {
+                if ($jobOrder && in_array($jobOrder->status, ['dispatching', 'paused'])) {
+                    $previousStatus = $jobOrder->status;
                     // Update job order status
                     $jobOrder->status = 'dispatched';
                     $jobOrder->save();
@@ -531,7 +534,7 @@ class JobOrderForm extends Component
                     Log::channel('job_order_log')->info('Job order status updated to dispatched', [
                         'job_order_id' => $jobOrderId,
                         'job_number' => $jobOrder->job_number,
-                        'previous_status' => 'dispatching',
+                        'previous_status' => $previousStatus,
                         'new_status' => 'dispatched',
                         'user_id' => $this->authUser->id,
                         'user_mode' => $this->authUser->mode,
@@ -1094,6 +1097,7 @@ class JobOrderForm extends Component
             
             if (!$jobOrder) {
                 session()->flash('error', 'Job order not found.');
+                $this->showRequestQtyModal = false;
                 return redirect()->back();
             }
 
@@ -1104,6 +1108,7 @@ class JobOrderForm extends Component
 
             if ($dispatchedCount == 0) {
                 session()->flash('error', 'No dispatched items found. Cannot request quantity update.');
+                $this->showRequestQtyModal = false;
                 return redirect()->back();
             }
 
@@ -1114,10 +1119,12 @@ class JobOrderForm extends Component
             $jobOrder->save();
 
             $this->hasPendingQtyUpdateRequest = true;
+            $this->showRequestQtyModal = false;
 
             session()->flash('success', 'Request sent to admin for quantity update approval.');
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to send request: ' . $e->getMessage());
+            $this->showRequestQtyModal = false;
         }
     }
 
@@ -1203,6 +1210,7 @@ class JobOrderForm extends Component
                 ->where('order_id', $jobOrderId)
                 ->get();
             $this->hasPendingQtyUpdateRequest = false;
+            $this->showUpdateQtyModal = false;
 
             // Refresh the component
             $this->mount($jobOrderId);

@@ -78,6 +78,13 @@ class JobOrderView extends Component
             ->exists();
 
         if ($jobOrderId) {
+            // Check and update dispatch status if all items are fully dispatched
+            $this->checkAndUpdateDispatchStatus($jobOrderId);
+            // Reload job order to get updated status
+            $this->jobOrder = JobOrder::with('customer', 'user', 'jobDoneBy', 'jobCheckedBy')->find($jobOrderId);
+            $this->status = $this->jobOrder->status;
+            $this->statusText = StatusHelper::getJobOrderStatus($this->jobOrder->status);
+            
             $this->loadOrderDetails($jobOrderId);
         }
     }
@@ -139,10 +146,11 @@ class JobOrderView extends Component
                 }
             }
 
-            // If all items are fully dispatched and current status is 'dispatching', update to 'dispatched'
+            // If all items are fully dispatched and current status is 'dispatching' or 'paused', update to 'dispatched'
             if ($allItemsFullyDispatched) {
                 $jobOrder = JobOrder::find($jobOrderId);
-                if ($jobOrder && $jobOrder->status === 'dispatching') {
+                if ($jobOrder && in_array($jobOrder->status, ['dispatching', 'paused'])) {
+                    $previousStatus = $jobOrder->status;
                     // Update job order status
                     $jobOrder->status = 'dispatched';
                     $jobOrder->save();
@@ -159,7 +167,7 @@ class JobOrderView extends Component
                     Log::channel('job_order_log')->info('Job order status updated to dispatched', [
                         'job_order_id' => $jobOrderId,
                         'job_number' => $jobOrder->job_number,
-                        'previous_status' => 'dispatching',
+                        'previous_status' => $previousStatus,
                         'new_status' => 'dispatched',
                         'user_id' => $this->authUser->id,
                         'user_mode' => $this->authUser->mode,

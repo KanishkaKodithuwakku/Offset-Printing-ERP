@@ -638,45 +638,17 @@
                         // Don't show button if all items are fully dispatched
                         $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus);
                     @endphp
-                    @if ($canShowButton)
-                        @if ($authUser->mode === 'admin')
-                            <button wire:click="updateJobOrderQuantityToDispatched({{ $jobOrderId }})"
-                                wire:confirm="Are you sure you want to update the job order quantity to match the dispatched quantity? This will remove any remaining balance from the job order."
-                                class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
-                                <svg class="w-4 h-4 text-white" aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
-                                </svg>
-                                Update Qty to Dispatched
-                            </button>
-                        @elseif ($authUser->mode === 'dispatch')
-                            @if ($hasPendingQtyUpdateRequest)
-                                <button disabled
-                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
-                                    <svg class="w-4 h-4" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                        viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                    </svg>
-                                    Request Pending
-                                </button>
-                            @else
-                                <button wire:click="requestQtyUpdateToAdmin({{ $jobOrderId }})"
-                                    wire:confirm="Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?"
-                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                                    <svg class="w-4 h-4 text-white" aria-hidden="true"
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                        viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Request Admin to Update Qty
-                                </button>
-                            @endif
-                        @endif
+                    @if ($canShowButton && $authUser->mode === 'admin')
+                        <button wire:click="$set('showUpdateQtyModal', true)"
+                            class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                            <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
+                            </svg>
+                            Update Qty to Dispatched
+                        </button>
                     @endif
                 </div>
                 <table class="min-w-full">
@@ -885,4 +857,70 @@
 
         </div>
     </div>
+
+    {{-- Update Qty to Dispatched Modal --}}
+    @if ($showUpdateQtyModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showUpdateQtyModal', false)"></div>
+        <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+            <div @click.outside="$wire.set('showUpdateQtyModal', false)"
+                class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+                <div class="text-center">
+                    <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                        Confirm Update Quantity
+                    </h4>
+                    <div class="text-center">
+                        <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                            Are you sure you want to update the job order quantity to match the dispatched quantity? This will remove any remaining balance from the job order.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-center w-full gap-3 mt-8">
+                        <button wire:click="$set('showUpdateQtyModal', false)" type="button"
+                            class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                            Cancel
+                        </button>
+                        <button wire:click="updateJobOrderQuantityToDispatched({{ $jobOrderId }})" type="button"
+                            class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                            Update Qty
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Request Qty Update Modal (for dispatch users) --}}
+    @if ($showRequestQtyModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showRequestQtyModal', false)"></div>
+        <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+            <div @click.outside="$wire.set('showRequestQtyModal', false)"
+                class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+                <div class="text-center">
+                    <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                        Request Quantity Update
+                    </h4>
+                    <div class="text-center">
+                        <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                            Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-center w-full gap-3 mt-8">
+                        <button wire:click="$set('showRequestQtyModal', false)" type="button"
+                            class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                            Cancel
+                        </button>
+                        <button wire:click="requestQtyUpdateToAdmin({{ $jobOrderId }})" type="button"
+                            class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                            Send Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
