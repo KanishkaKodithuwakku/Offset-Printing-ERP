@@ -686,8 +686,9 @@ class JobOrderForm extends Component
             }
 
             // Check if any item remaining quantity becomes 0 (all items dispatched) before saving
+            // Skip this check if admin has already approved the request (qtyUpdateApproved = true)
             $allItemsDispatched = false;
-            if ($this->jobOrderId) {
+            if ($this->jobOrderId && !($this->authUser->mode === 'admin' && $this->qtyUpdateApproved)) {
                 foreach ($this->jobOrderItems as $item) {
                     // Get dispatched count for the item
                     $dispatchedCount = DB::table('dispatch_items')
