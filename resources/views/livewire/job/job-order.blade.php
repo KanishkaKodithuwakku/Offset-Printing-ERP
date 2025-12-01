@@ -671,7 +671,7 @@
                                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M12 4v16m8-8H4" />
                                     </svg>
-                                    Request Admin to Update Qty
+                                    Request Admin to Complete Dispatch
                                 </button>
                             @endif
                         @endif
@@ -926,11 +926,11 @@
                 class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
                 <div class="text-center">
                     <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-                        Request Quantity Update
+                        Request Complete Dispatch
                     </h4>
                     <div class="text-center">
                         <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
-                            Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?
+                            Are you sure you want to request admin to complete the dispatch with current dispatched quantity?
                         </p>
                     </div>
 
