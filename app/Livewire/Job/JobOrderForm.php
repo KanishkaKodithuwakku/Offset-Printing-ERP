@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 class JobOrderForm extends Component
 {
 
-    public $branch_code, $dispatchedCount = 0, $status, $customer_po_number, $authUser, $jobOrderId, $job_number, $date_created, $customer_id, $branch_id, $description, $special_instruction, $printout, $plate_backing = false, $backing_qty = 1;
+    public $branch_code, $dispatchedCount = 0, $status, $previous_status, $customer_po_number, $authUser, $jobOrderId, $job_number, $date_created, $customer_id, $branch_id, $description, $special_instruction, $printout, $plate_backing = false, $backing_qty = 1;
     public $job_done_by, $job_checked_by, $color_print, $delivery_date;
     public $searchCustomer;
     public $searchResultsCustomer;
@@ -91,6 +91,9 @@ class JobOrderForm extends Component
                 }
                 $jobOrder->save();
 
+                // Update the status property to reflect the change
+                $this->status = $jobOrder->status;
+
                 // Log status change
                 Log::channel('job_order_log')->info('Job order status changed to paused', [
                     'job_order_id' => $jobOrderId,
@@ -100,7 +103,13 @@ class JobOrderForm extends Component
                     'user_id' => $this->authUser->id,
                     'user_mode' => $this->authUser->mode
                 ]);
+            } else {
+                // Set status property if not changed
+                $this->status = $jobOrder->status;
             }
+            
+            // Store previous_status for view condition
+            $this->previous_status = $jobOrder->previous_status ?? $jobOrder->status;
 
             //gete teh dispatched items
             $this->dispatchedItems = DispatchItem::with('item')
