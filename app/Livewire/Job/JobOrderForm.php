@@ -649,10 +649,19 @@ class JobOrderForm extends Component
                 }
 
                 // Proceed with saving the item if validation is passed
-                if ($jobOrderItemCount - $dispatchedCount != $item['quantity']) {
+                if (($jobOrderItemCount ?? 0) - $dispatchedCount != $item['quantity']) {
 
-                    if ($jobOrderItemCount > 0) {
-                        $quantity = $jobOrderItemCount + $item['quantity'];
+                    // The form shows remaining quantity (total - dispatched)
+                    // If user enters positive number: they want that as the new remaining quantity
+                    // If user enters negative number: they want to reduce the remaining by that amount
+                    if ($item['quantity'] >= 0) {
+                        // Positive: set remaining to entered value
+                        $quantity = $item['quantity'] + $dispatchedCount;
+                    } else {
+                        // Negative: reduce remaining by entered amount (only for existing items)
+                        $currentRemaining = ($jobOrderItemCount ?? 0) - $dispatchedCount;
+                        $newRemaining = $currentRemaining + $item['quantity']; // Adding negative reduces it
+                        $quantity = $newRemaining + $dispatchedCount;
                     }
 
                     // Calculate and validate that total price matches price * quantity
@@ -664,8 +673,8 @@ class JobOrderForm extends Component
                         $itemName = $item['name'] ?? 'Item';
                         // Build a clearer message explaining the calculation
                         $quantityInfo = '';
-                        if ($jobOrderItemCount > 0) {
-                            $quantityInfo = " (Existing: {$jobOrderItemCount} + Entered: {$item['quantity']} = Final: {$quantity})";
+                        if ($dispatchedCount > 0) {
+                            $quantityInfo = " (Entered remaining: {$item['quantity']} + Dispatched: {$dispatchedCount} = Final: {$quantity})";
                         }
                         // Show a warning but continue - the correct total will be saved
                         session()->flash('warning', "Total price auto-corrected for '{$itemName}'. Provided: " . number_format($providedTotal, 2) . ", Corrected to: " . number_format($expectedTotal, 2) . " based on Price × Final Quantity = " . number_format($item['selling_price'], 2) . " × " . $quantity . $quantityInfo);
