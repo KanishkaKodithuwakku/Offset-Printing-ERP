@@ -46,7 +46,7 @@
                     </h4>
 
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        A dispatch user has requested to complete the dispatch with current dispatched quantity. Please review the quantities and click the <strong>"Save Order"</strong> button to approve this request.
+                        A dispatch user has requested to complete the dispatch with current dispatched quantity. Please review the quantities and click the <strong>"Update Qty to Dispatched"</strong> button first to approve this request, then you can save the order.
                     </p>
                 </div>
             </div>
@@ -391,8 +391,13 @@
                         <!-- Buttons area -->
                         <div
                             class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800 mb-5 pt-2 px-5">
+                            @php
+                                // Disable Save Order button for admin if there's a pending request and not yet approved
+                                $isSaveDisabled = ($hasPendingQtyUpdateRequest && $authUser->mode === 'admin' && !$qtyUpdateApproved);
+                            @endphp
                             <button type="submit" wire:loading.class="opacity-50"
-                                class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 mt-5">
+                                @if($isSaveDisabled) disabled @endif
+                                class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg shadow-theme-xs mt-5 @if($isSaveDisabled) bg-gray-400 cursor-not-allowed @else bg-brand-500 hover:bg-brand-600 @endif">
                                 <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
                                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                     viewBox="0 0 24 24">

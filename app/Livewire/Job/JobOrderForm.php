@@ -42,6 +42,7 @@ class JobOrderForm extends Component
     public $showUpdateQtyModal = false;
     public $showRequestQtyModal = false;
     public $showRequestSuccessModal = false;
+    public $qtyUpdateApproved = false;
 
     protected $rules = [
         'customer_id' => 'required|exists:customers,id',
@@ -162,6 +163,9 @@ class JobOrderForm extends Component
                 ->where('id', $jobOrderId)
                 ->where('qty_update_requested', true)
                 ->exists();
+            
+            // Reset approval flag when loading (will be set to true after admin approves)
+            $this->qtyUpdateApproved = false;
 
             // Job Order data
             $this->job_number = $jobOrder->job_number;
@@ -1277,6 +1281,7 @@ class JobOrderForm extends Component
                 ->get();
             $this->hasPendingQtyUpdateRequest = false;
             $this->showUpdateQtyModal = false;
+            $this->qtyUpdateApproved = true; // Mark as approved to enable Save Order button
 
             // Refresh the component
             $this->mount($jobOrderId);
