@@ -38,6 +38,7 @@ class JobOrderForm extends Component
     public ?int $selectedBranchId = null;
     public $hasDispatchedItems = false;
     public $hasPendingQtyUpdateRequest = false;
+    public $isFullyDispatched = false;
 
     protected $rules = [
         'customer_id' => 'required|exists:customers,id',
@@ -133,6 +134,9 @@ class JobOrderForm extends Component
             $this->dispatchedCount = (int)$dispatchedCount;
             $this->hasDispatchedItems = $this->dispatchedCount > 0;
             
+            // Check if all items are fully dispatched
+            $this->isFullyDispatched = $this->checkIfFullyDispatched($jobOrderId);
+            
             // Update debug log with correct values
             Log::channel('job_order_log')->debug('JobOrderForm mount - After checking dispatched items', [
                 'job_order_id' => $jobOrderId,
@@ -140,6 +144,7 @@ class JobOrderForm extends Component
                 'previous_status' => $this->previous_status,
                 'dispatchedCount' => $this->dispatchedCount,
                 'hasDispatchedItems' => $this->hasDispatchedItems,
+                'isFullyDispatched' => $this->isFullyDispatched,
                 'user_mode' => $this->authUser->mode
             ]);
 
@@ -1045,6 +1050,31 @@ class JobOrderForm extends Component
         $this->showBranchDropdown = false;
 
         session()->flash('success', 'Branch updated successfully. Stock will be adjusted accordingly.');
+    }
+
+    /**
+     * Check if all job order items are fully dispatched
+     */
+    private function checkIfFullyDispatched($jobOrderId)
+    {
+        $jobOrderItems = JobOrderItem::where('order_id', $jobOrderId)->get();
+        
+        if ($jobOrderItems->isEmpty()) {
+            return false;
+        }
+
+        foreach ($jobOrderItems as $jobOrderItem) {
+            $dispatchedQty = DB::table('dispatch_items')
+                ->where('job_order_item_id', $jobOrderItem->id)
+                ->sum('quantity');
+            
+            // If any item is not fully dispatched, return false
+            if ($dispatchedQty < $jobOrderItem->quantity) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
