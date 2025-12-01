@@ -772,6 +772,13 @@ class JobOrderForm extends Component
                         $quantity = $newRemaining + $dispatchedCount;
                     }
 
+                    // Prevent updating to 0 if there are no dispatched items
+                    if ($quantity == 0 && $dispatchedCount == 0) {
+                        $itemName = $item['name'] ?? 'Item';
+                        session()->flash('error', "Cannot update quantity to 0 for '{$itemName}'. At least one item must be dispatched before the quantity can be set to 0.");
+                        return;
+                    }
+
                     // Calculate and validate that total price matches price * quantity
                     $expectedTotal = abs($quantity * $item['selling_price']);
                     $providedTotal = abs($item['total']);
