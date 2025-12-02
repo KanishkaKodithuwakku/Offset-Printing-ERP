@@ -1367,6 +1367,54 @@ class JobOrderForm extends Component
         }
     }
 
+    /**
+     * Update dispatch item quantity
+     */
+    public function updateDispatchItemQuantity($dispatchItemId, $newQuantity)
+    {
+        try {
+            $dispatchItem = DispatchItem::find($dispatchItemId);
+            
+            if (!$dispatchItem) {
+                session()->flash('error', 'Dispatch item not found.');
+                return;
+            }
+
+            // Validate quantity
+            if ($newQuantity < 0) {
+                session()->flash('error', 'Quantity cannot be negative.');
+                // Reload to reset the value
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            // Update the dispatch item quantity
+            $oldQuantity = $dispatchItem->quantity;
+            $dispatchItem->quantity = (int)$newQuantity;
+            $dispatchItem->total_amount = $dispatchItem->quantity * ($dispatchItem->item->sales_price ?? 0);
+            $dispatchItem->save();
+
+            // Reload dispatched items to reflect changes
+            $this->dispatchedItems = DispatchItem::with('item')
+                ->where('order_id', $this->jobOrderId)
+                ->get();
+
+            // Recalculate dispatched count
+            $dispatchedCount = DB::table('dispatch_items')
+                ->where('order_id', $this->jobOrderId)
+                ->sum('quantity');
+            $this->dispatchedCount = (int)$dispatchedCount;
+            $this->hasDispatchedItems = $this->dispatchedCount > 0;
+            $this->isFullyDispatched = $this->checkIfFullyDispatched($this->jobOrderId);
+
+            session()->flash('success', 'Dispatch item quantity updated successfully.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update dispatch item quantity: ' . $e->getMessage());
+            // Reload to reset on error
+            $this->mount($this->jobOrderId);
+        }
+    }
+
     public function render()
     {
         $bodyAttributes = 'x-data="{ page: \'jobOrder\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
