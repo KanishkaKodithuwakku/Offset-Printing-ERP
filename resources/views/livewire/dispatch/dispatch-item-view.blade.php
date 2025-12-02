@@ -341,8 +341,7 @@
                             Request Pending
                         </button>
                     @else
-                                <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})"
-                                    wire:confirm="Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?"
+                                <button wire:click="$set('showRequestQtyModal', true)"
                                     class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
                             <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
                                 xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
@@ -373,3 +372,56 @@
         </div>
     </div>
 </div>
+
+{{-- Request Qty Update Modal --}}
+@if ($showRequestQtyModal)
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" x-data="{ show: @entangle('showRequestQtyModal') }" x-show="show" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.away="show = false">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
+                Request Complete Dispatch
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?
+            </p>
+            <div class="flex justify-end gap-3">
+                <button wire:click="$set('showRequestQtyModal', false)"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})"
+                    class="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600">
+                    Send Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- Request Success Modal --}}
+@if ($showRequestSuccessModal)
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" x-data="{ show: @entangle('showRequestSuccessModal') }" x-show="show" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.away="show = false">
+        <div class="p-6">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2 text-center">
+                Request Sent Successfully
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 text-center">
+                Your request has been sent to the admin for approval.
+            </p>
+            <div class="flex justify-center">
+                <button wire:click="redirectToJobOrderList"
+                    class="px-6 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif

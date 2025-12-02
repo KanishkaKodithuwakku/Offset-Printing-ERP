@@ -33,6 +33,8 @@ class DispatchItem extends Component
     public $hasDispatchedItems = false;
     public $hasPendingQtyUpdateRequest = false;
     public $isFullyDispatched = false;
+    public $showRequestQtyModal = false;
+    public $showRequestSuccessModal = false;
 
     protected $rules = [
         'item_id' => 'required|exists:items,id',
@@ -536,7 +538,8 @@ class DispatchItem extends Component
             
             if (!$jobOrder) {
                 session()->flash('error', 'Job order not found.');
-                return redirect()->back();
+                $this->showRequestQtyModal = false;
+                return;
             }
 
             // Check if there are dispatched items
@@ -546,7 +549,8 @@ class DispatchItem extends Component
 
             if ($dispatchedCount == 0) {
                 session()->flash('error', 'No dispatched items found. Cannot request quantity update.');
-                return redirect()->back();
+                $this->showRequestQtyModal = false;
+                return;
             }
 
             // Set the request flag
@@ -557,11 +561,21 @@ class DispatchItem extends Component
 
             $this->hasPendingQtyUpdateRequest = true;
             $this->loadOrderDetails($orderId);
-
-            session()->flash('success', 'Request sent to admin for quantity update approval.');
+            $this->showRequestQtyModal = false;
+            $this->showRequestSuccessModal = true;
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to send request: ' . $e->getMessage());
+            $this->showRequestQtyModal = false;
         }
+    }
+
+    /**
+     * Handle redirect to job order list after success modal
+     */
+    public function redirectToJobOrderList()
+    {
+        $this->showRequestSuccessModal = false;
+        return $this->redirect('/job-orders', navigate: true);
     }
 
     /**
