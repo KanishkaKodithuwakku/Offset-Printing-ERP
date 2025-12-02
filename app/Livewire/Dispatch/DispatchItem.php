@@ -114,7 +114,7 @@ class DispatchItem extends Component
                 // For fully dispatched items, set quantity to 0 so they can enter new quantity
                 $this->dispatchItems[] = [
                     'item_id' => $orderItem->item_id,
-                    'item_name' => $item?->item_name ?? 'Unknown',
+                    'item_name' => $orderItem->item->item_name ?? $item?->item_name ?? 'Unknown',
                     'item_code' => $item?->item_code ?? null,
                     'job_order_item_id' => $orderItem->id,
                     'dispatch_id' => null,
@@ -125,7 +125,6 @@ class DispatchItem extends Component
                     'purchase_price' => $item?->purchase_price ?? 0,
                     'sales_price' => $item?->sales_price ?? 0,
                     'total_amount' => $orderItem->price * ($dispatchBalance > 0 ? $dispatchBalance : 0),
-                    'item_name' => $orderItem->item->item_name ?? 'Unknown',
                     'status' => $orderItem->status,
                 ];
             }
