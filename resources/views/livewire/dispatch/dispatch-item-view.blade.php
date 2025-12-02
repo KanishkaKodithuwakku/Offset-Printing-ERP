@@ -227,7 +227,12 @@
                 </thead>
                 <tbody>
                     @foreach ($dispatchItems as $index => $orderItem)
-                        @if ($dispatchStatus === 'dispatching' || ($dispatchStatus === 'paused' && $authUser->mode === 'dispatch'))
+                        @php
+                            $canEdit = $dispatchStatus === 'dispatching' || 
+                                      ($dispatchStatus === 'paused' && $authUser->mode === 'dispatch') ||
+                                      ($dispatchStatus === 'dispatched' && $authUser->mode === 'dispatch');
+                        @endphp
+                        @if ($canEdit)
                             <tr class="border-t border-gray-100 cursor-pointer dark:border-gray-800 hover:bg-gray-200">
                                 <td class="px-3 py-1">
                                     <p class="font-medium text-gray-500 text-theme-sm dark:text-white/90">
@@ -240,7 +245,6 @@
                                         <input type="number"
                                             wire:model.live="dispatchItems.{{ $index }}.quantity"
                                             min="0"
-                                            max="{{ $orderItem['dispatchBalance'] == 0 ? $orderItem['quantity'] : $orderItem['dispatchBalance'] }}"
                                             class="w-16 h-6 p-1 text-center border">
                                     </p>
                                 </td>
