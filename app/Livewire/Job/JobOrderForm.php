@@ -43,6 +43,7 @@ class JobOrderForm extends Component
     public $showRequestQtyModal = false;
     public $showRequestSuccessModal = false;
     public $qtyUpdateApproved = false;
+    public $isEditingDispatchQty = false; // Flag to prevent modal when editing dispatched quantity
 
     protected $rules = [
         'customer_id' => 'required|exists:customers,id',
@@ -690,11 +691,18 @@ class JobOrderForm extends Component
             $shouldCheckModal = true;
             
             if ($this->jobOrderId) {
-                // Skip modal check if admin has already approved OR if there's no pending request
+                // Skip modal check if:
+                // - Admin has already approved OR if there's no pending request
+                // - User is currently editing dispatched quantity (not saving)
                 if ($this->authUser->mode === 'admin') {
                     if ($this->qtyUpdateApproved || !$this->hasPendingQtyUpdateRequest) {
                         $shouldCheckModal = false;
                     }
+                }
+                
+                // Don't show modal if user is just editing dispatched quantity
+                if ($this->isEditingDispatchQty) {
+                    $shouldCheckModal = false;
                 }
                 
                 if ($shouldCheckModal) {
@@ -1374,6 +1382,9 @@ class JobOrderForm extends Component
      */
     public function updateDispatchItemQuantity($dispatchItemId, $newQuantity)
     {
+        // Set flag to prevent modal from appearing during dispatch quantity edit
+        $this->isEditingDispatchQty = true;
+        
         DB::beginTransaction();
         
         try {
@@ -1492,9 +1503,19 @@ class JobOrderForm extends Component
             $this->hasDispatchedItems = $this->dispatchedCount > 0;
             $this->isFullyDispatched = $this->checkIfFullyDispatched($this->jobOrderId);
 
+            // Ensure modals are closed - this is just an edit, not a save action
+            $this->showRequestQtyModal = false;
+            $this->showUpdateQtyModal = false;
+            $this->showRequestSuccessModal = false;
+            
+            // Reset the flag after successful update
+            $this->isEditingDispatchQty = false;
+
             session()->flash('success', 'Dispatch item quantity updated successfully. Job order quantity updated from ' . $oldJobOrderItemQty . ' to ' . $newTotalDispatched . '. Total dispatched: ' . $newTotalDispatched . '.');
         } catch (\Exception $e) {
             DB::rollBack();
+            // Reset the flag even on error
+            $this->isEditingDispatchQty = false;
             Log::channel('job_order_log')->error('Error updating dispatch item quantity', [
                 'dispatch_item_id' => $dispatchItemId,
                 'new_quantity' => $newQuantity,
