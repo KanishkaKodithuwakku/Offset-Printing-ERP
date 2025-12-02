@@ -850,8 +850,8 @@
                                     <p class="text-theme-xs text-gray-700 dark:text-gray-400">
                                         <input type="number" wire:model.defer="jobOrderItems.{{ $index }}.quantity"
                                             min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}"
-                                            @if ($hasPendingQtyUpdateRequest && $authUser->mode === 'dispatch') disabled @endif
-                                            class="w-16 border p-1 text-center @if ($hasPendingQtyUpdateRequest && $authUser->mode === 'dispatch') bg-gray-100 cursor-not-allowed @endif">
+                                            @if ($hasPendingQtyUpdateRequest) disabled @endif
+                                            class="w-16 border p-1 text-center @if ($hasPendingQtyUpdateRequest) bg-gray-100 cursor-not-allowed @endif">
                                     </p>
                                 </div>
                             </td>
