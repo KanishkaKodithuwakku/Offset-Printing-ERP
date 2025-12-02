@@ -1369,6 +1369,8 @@ class JobOrderForm extends Component
 
     /**
      * Update dispatch item quantity
+     * When user edits the dispatched quantity, it adds to existing dispatched quantity
+     * and updates the job order item quantity accordingly
      */
     public function updateDispatchItemQuantity($dispatchItemId, $newQuantity)
     {
@@ -1402,25 +1404,55 @@ class JobOrderForm extends Component
                 return;
             }
 
-            // Update the dispatch item quantity
-            $oldQuantity = $dispatchItem->quantity;
+            // Get the job order item
+            $jobOrderItem = JobOrderItem::find($dispatchItem->job_order_item_id);
+            if (!$jobOrderItem) {
+                session()->flash('error', 'Job order item not found.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            // Get current total dispatched quantity for this job order item (excluding this dispatch item)
+            $currentTotalDispatchedExcludingThis = DB::table('dispatch_items')
+                ->where('job_order_item_id', $dispatchItem->job_order_item_id)
+                ->where('id', '!=', $dispatchItem->id)
+                ->sum('quantity');
+
+            // The new quantity entered represents additional quantity to dispatch
+            // Example: If current dispatched is 7, and user enters 5, it means add 5 more
+            // So: new total dispatched = existing dispatched (excluding this item) + new quantity entered
+            $oldDispatchItemQty = $dispatchItem->quantity;
+            $newTotalDispatched = $currentTotalDispatchedExcludingThis + $newQuantity;
+            
+            // Update the dispatch item quantity to the new value (this represents additional qty)
             $dispatchItem->quantity = $newQuantity;
             
             // Recalculate total amount based on the item's sales price
-            // Get price from the item relationship or from job order item
             $price = 0;
             if ($dispatchItem->item) {
                 $price = $dispatchItem->item->sales_price ?? 0;
             } else {
-                // Fallback: get price from job order item
-                $jobOrderItem = JobOrderItem::find($dispatchItem->job_order_item_id);
-                if ($jobOrderItem) {
-                    $price = $jobOrderItem->price ?? 0;
-                }
+                $price = $jobOrderItem->price ?? 0;
             }
             
             $dispatchItem->total_amount = $newQuantity * $price;
             $dispatchItem->save();
+
+            // Update job order item quantity to match the new total dispatched quantity
+            // This ensures job order qty = total dispatched
+            $oldJobOrderItemQty = $jobOrderItem->quantity;
+            $jobOrderItem->quantity = $newTotalDispatched;
+            $jobOrderItem->total = $jobOrderItem->price * $newTotalDispatched;
+            $jobOrderItem->save();
+
+            // Update job order total amount
+            $jobOrder = JobOrder::find($this->jobOrderId);
+            if ($jobOrder) {
+                $totalAmount = JobOrderItem::where('order_id', $this->jobOrderId)->sum('total');
+                $jobOrder->total_amount = $totalAmount;
+                $jobOrder->save();
+            }
 
             DB::commit();
 
@@ -1428,6 +1460,29 @@ class JobOrderForm extends Component
             $this->dispatchedItems = DispatchItem::with('item')
                 ->where('order_id', $this->jobOrderId)
                 ->get();
+
+            // Reload job order items to reflect updated quantities
+            $jobOrder = JobOrder::with('orderItems', 'orderItems.item')->find($this->jobOrderId);
+            if ($jobOrder) {
+                $this->jobOrderItems = $jobOrder->orderItems->map(function ($item) {
+                    $dispatchedCount = DB::table('dispatch_items')
+                        ->where('order_id', $item->order_id)
+                        ->where('item_id', $item->item_id)
+                        ->sum('quantity');
+
+                    return [
+                        'id' => $item->id,
+                        'item_id' => $item->item_id,
+                        'name' => $item->item->item_name ?? '',
+                        'code' => $item->item->item_code ?? '',
+                        'selling_price' => $item->price,
+                        'purchase_price' => $item->item->purchase_price ?? 0,
+                        'quantity' => $item->quantity - $dispatchedCount,
+                        'dispatchedCount' => $dispatchedCount,
+                        'total' => $item->total,
+                    ];
+                })->toArray();
+            }
 
             // Recalculate dispatched count
             $dispatchedCount = DB::table('dispatch_items')
@@ -1437,7 +1492,7 @@ class JobOrderForm extends Component
             $this->hasDispatchedItems = $this->dispatchedCount > 0;
             $this->isFullyDispatched = $this->checkIfFullyDispatched($this->jobOrderId);
 
-            session()->flash('success', 'Dispatch item quantity updated successfully from ' . $oldQuantity . ' to ' . $newQuantity . '.');
+            session()->flash('success', 'Dispatch item quantity updated successfully. Job order quantity updated from ' . $oldJobOrderItemQty . ' to ' . $newTotalDispatched . '. Total dispatched: ' . $newTotalDispatched . '.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::channel('job_order_log')->error('Error updating dispatch item quantity', [
