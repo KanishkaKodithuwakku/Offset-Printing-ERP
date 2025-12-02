@@ -669,7 +669,13 @@
                         $wasValidStatus = in_array($prevStatus, ['dispatching', 'printing']);
                         $hasDispatchedQty = ($dispatchedCount ?? 0) > 0;
                         // Don't show button if all items are fully dispatched
-                        $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus);
+                        // For admin: only show if there's a pending request
+                        // For dispatch: show if conditions are met (they can request)
+                        if ($authUser->mode === 'admin') {
+                            $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus) && $hasPendingQtyUpdateRequest;
+                        } else {
+                            $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus);
+                        }
                     @endphp
                     @if ($canShowButton)
                         @if ($authUser->mode === 'admin')
