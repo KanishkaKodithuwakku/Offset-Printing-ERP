@@ -375,24 +375,31 @@
 
 {{-- Request Qty Update Modal --}}
 @if ($showRequestQtyModal)
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" x-data="{ show: @entangle('showRequestQtyModal') }" x-show="show" x-transition>
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.away="show = false">
-        <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
-                Request Complete Dispatch
-            </h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?
-            </p>
-            <div class="flex justify-end gap-3">
-                <button wire:click="$set('showRequestQtyModal', false)"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
-                    Cancel
-                </button>
-                <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})"
-                    class="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600">
-                    Send Request
-                </button>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showRequestQtyModal', false)"></div>
+    <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+        <div @click.outside="$wire.set('showRequestQtyModal', false)"
+            class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+            <div class="text-center">
+                <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                    Request Complete Dispatch
+                </h4>
+                <div class="text-center">
+                    <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                        Are you sure you want to request admin to update the job order quantity to match the dispatched quantity?
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-center w-full gap-3 mt-8">
+                    <button wire:click="$set('showRequestQtyModal', false)" type="button"
+                        class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                        Cancel
+                    </button>
+                    <button wire:click="requestQtyUpdateToAdmin({{ $jobOrder->id }})" type="button"
+                        class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                        Send Request
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,25 +408,32 @@
 
 {{-- Request Success Modal --}}
 @if ($showRequestSuccessModal)
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" x-data="{ show: @entangle('showRequestSuccessModal') }" x-show="show" x-transition>
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.away="show = false">
-        <div class="p-6">
-            <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
-                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90 mb-2 text-center">
-                Request Sent Successfully
-            </h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 text-center">
-                Your request has been sent to the admin for approval.
-            </p>
-            <div class="flex justify-center">
-                <button wire:click="redirectToJobOrderList"
-                    class="px-6 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600">
-                    OK
-                </button>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showRequestSuccessModal', false)"></div>
+    <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+        <div @click.outside="$wire.set('showRequestSuccessModal', false)"
+            class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+            <div class="text-center">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                    Request Sent Successfully
+                </h4>
+                <div class="text-center">
+                    <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                        Your request has been sent to the admin for approval.
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-center w-full gap-3 mt-8">
+                    <button wire:click="redirectToJobOrderList" type="button"
+                        class="flex justify-center px-6 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                        OK
+                    </button>
+                </div>
             </div>
         </div>
     </div>
