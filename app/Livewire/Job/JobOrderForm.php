@@ -1240,50 +1240,8 @@ class JobOrderForm extends Component
                 return redirect()->back();
             }
 
-            $totalAmount = 0;
-            $hasAnyDispatchedItems = false;
-
-            // Loop through all job order items
-            foreach ($jobOrder->orderItems as $jobOrderItem) {
-                // Get total dispatched quantity for this item
-                $dispatchedQty = DB::table('dispatch_items')
-                    ->where('job_order_item_id', $jobOrderItem->id)
-                    ->sum('quantity');
-
-                // Prevent updating to 0 - skip items with no dispatched quantity
-                if ($dispatchedQty > 0) {
-                    $hasAnyDispatchedItems = true;
-                    // Update the job order item quantity to match dispatched quantity
-                    $jobOrderItem->quantity = $dispatchedQty;
-                    $jobOrderItem->total = $jobOrderItem->price * $dispatchedQty;
-                    $jobOrderItem->status = 'dispatched';
-                    $jobOrderItem->save();
-
-                    $totalAmount += $jobOrderItem->total;
-                }
-            }
-
-            // Check if we have any items to update
-            if (!$hasAnyDispatchedItems) {
-                DB::rollBack();
-                session()->flash('error', 'Cannot update: No dispatched items found. Quantity cannot be set to 0.');
-                return redirect()->back();
-            }
-
-            // Update job order total amount
-            $jobOrder->total_amount = $totalAmount;
-            // Clear the request flag after approval
-            $jobOrder->qty_update_requested = false;
-            $jobOrder->qty_update_requested_by = null;
-            $jobOrder->qty_update_requested_at = null;
-            $jobOrder->save();
-
-            // Update dispatch status
-            $jobOrder->fresh();
-            $jobOrder->updateDispatchStatus();
-
-            // Consolidate dispatch items: merge multiple dispatch items for the same job_order_item_id into one
-            // Group by job_order_item_id and merge quantities
+            // First, consolidate dispatch items: merge multiple dispatch items for the same job_order_item_id into one
+            // This ensures we work with consolidated data when updating job order items
             $dispatchItemsByJobOrderItem = DB::table('dispatch_items')
                 ->where('order_id', $jobOrderId)
                 ->select('job_order_item_id', DB::raw('SUM(quantity) as total_quantity'), DB::raw('SUM(total_amount) as total_amount_sum'))
@@ -1319,6 +1277,51 @@ class JobOrderForm extends Component
                 }
             }
 
+            $totalAmount = 0;
+            $hasAnyDispatchedItems = false;
+
+            // Now loop through all job order items and update quantities based on consolidated dispatch items
+            foreach ($jobOrder->orderItems as $jobOrderItem) {
+                // Get total dispatched quantity for this item (after consolidation)
+                $dispatchedQty = DB::table('dispatch_items')
+                    ->where('job_order_item_id', $jobOrderItem->id)
+                    ->sum('quantity');
+
+                // Prevent updating to 0 - skip items with no dispatched quantity
+                if ($dispatchedQty > 0) {
+                    $hasAnyDispatchedItems = true;
+                    // Update the job order item quantity to match dispatched quantity
+                    $jobOrderItem->quantity = $dispatchedQty;
+                    $jobOrderItem->total = $jobOrderItem->price * $dispatchedQty;
+                    $jobOrderItem->status = 'dispatched';
+                    $jobOrderItem->save();
+                    
+                    // Refresh the model to ensure changes are persisted
+                    $jobOrderItem->refresh();
+
+                    $totalAmount += $jobOrderItem->total;
+                }
+            }
+
+            // Check if we have any items to update
+            if (!$hasAnyDispatchedItems) {
+                DB::rollBack();
+                session()->flash('error', 'Cannot update: No dispatched items found. Quantity cannot be set to 0.');
+                return redirect()->back();
+            }
+
+            // Update job order total amount
+            $jobOrder->total_amount = $totalAmount;
+            // Clear the request flag after approval
+            $jobOrder->qty_update_requested = false;
+            $jobOrder->qty_update_requested_by = null;
+            $jobOrder->qty_update_requested_at = null;
+            $jobOrder->save();
+
+            // Update dispatch status
+            $jobOrder->fresh();
+            $jobOrder->updateDispatchStatus();
+
             // Update all dispatch notes status
             DB::table('dispatch_notes')
                 ->where('job_order_id', $jobOrderId)
@@ -1337,10 +1340,29 @@ class JobOrderForm extends Component
                 ->where('order_id', $jobOrderId)
                 ->get();
             
-            // Reload job order to get updated status
+            // Reload job order to get updated status and quantities
             $jobOrder = JobOrder::with('orderItems', 'customer', 'orderItems.item')->find($jobOrderId);
             $this->status = $jobOrder->status;
             $this->previous_status = $jobOrder->previous_status;
+            
+            // Reload job order items to reflect updated quantities
+            $this->jobOrderItems = $jobOrder->orderItems->map(function ($item) {
+                $dispatchedCount = DB::table('dispatch_items')
+                    ->where('job_order_item_id', $item->id)
+                    ->sum('quantity');
+
+                return [
+                    'id' => $item->id,
+                    'item_id' => $item->item_id,
+                    'name' => $item->item->item_name ?? '',
+                    'code' => $item->item->item_code ?? '',
+                    'selling_price' => $item->price,
+                    'purchase_price' => $item->item->purchase_price ?? 0,
+                    'quantity' => $item->quantity - $dispatchedCount,
+                    'dispatchedCount' => $dispatchedCount,
+                    'total' => $item->total,
+                ];
+            })->toArray();
             
             // Recalculate dispatched count
             $dispatchedCount = DB::table('dispatch_items')
