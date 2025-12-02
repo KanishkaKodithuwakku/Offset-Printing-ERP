@@ -227,7 +227,7 @@
                 </thead>
                 <tbody>
                     @foreach ($dispatchItems as $index => $orderItem)
-                        @if ($dispatchStatus === 'dispatching')
+                        @if ($dispatchStatus === 'dispatching' || ($dispatchStatus === 'paused' && $authUser->mode === 'dispatch'))
                             <tr class="border-t border-gray-100 cursor-pointer dark:border-gray-800 hover:bg-gray-200">
                                 <td class="px-3 py-1">
                                     <p class="font-medium text-gray-500 text-theme-sm dark:text-white/90">
