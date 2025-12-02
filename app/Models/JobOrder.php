@@ -28,6 +28,9 @@ class JobOrder extends Model
         'status',
         'previous_status',
         'plate_backing',
+        'qty_update_requested',
+        'qty_update_requested_by',
+        'qty_update_requested_at',
         'backing_qty',
         'print_count',
         'reorder_count',
@@ -36,6 +39,8 @@ class JobOrder extends Model
 
     protected $casts = [
         'delivery_date' => 'datetime',
+        'qty_update_requested' => 'boolean',
+        'qty_update_requested_at' => 'datetime',
     ];
 
 
