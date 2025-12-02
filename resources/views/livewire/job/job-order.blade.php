@@ -673,28 +673,54 @@
                     @endphp
                     @if ($canShowButton)
                         @if ($authUser->mode === 'admin')
-                            <button wire:click="$set('showUpdateQtyModal', true)"
-                                class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
-                                <svg class="w-4 h-4 text-white" aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
-                                </svg>
-                                Update Qty to Dispatched
-                            </button>
-                        @elseif ($authUser->mode === 'dispatch')
-                            @if ($hasPendingQtyUpdateRequest)
-                                <button disabled
-                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
-                                    <svg class="w-4 h-4" aria-hidden="true"
+                            <div class="flex items-center gap-2">
+                                <button wire:click="$set('showUpdateQtyModal', true)"
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                                    <svg class="w-4 h-4 text-white" aria-hidden="true"
                                         xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                         viewBox="0 0 24 24">
                                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                            d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
                                     </svg>
-                                    Request Pending
+                                    Update Qty to Dispatched
                                 </button>
+                                @if ($hasPendingQtyUpdateRequest)
+                                    <button wire:click="cancelQtyUpdateRequest"
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-gray-500 shadow-theme-xs hover:bg-gray-600">
+                                        <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Cancel Request
+                                    </button>
+                                @endif
+                            </div>
+                        @elseif ($authUser->mode === 'dispatch')
+                            @if ($hasPendingQtyUpdateRequest)
+                                <div class="flex items-center gap-2">
+                                    <button disabled
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
+                                        <svg class="w-4 h-4" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        Request Pending
+                                    </button>
+                                    <button wire:click="cancelQtyUpdateRequest"
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-gray-500 shadow-theme-xs hover:bg-gray-600">
+                                        <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Cancel Request
+                                    </button>
+                                </div>
                             @else
                                 <button wire:click="$set('showRequestQtyModal', true)"
                                     class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">

@@ -1323,6 +1323,53 @@ class JobOrderForm extends Component
         }
     }
 
+    /**
+     * Cancel the pending quantity update request
+     * Can be called by admin or dispatch user (who sent the request)
+     */
+    public function cancelQtyUpdateRequest()
+    {
+        if (!$this->jobOrderId) {
+            session()->flash('error', 'Job order not found.');
+            return;
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            $jobOrder = JobOrder::find($this->jobOrderId);
+            
+            if (!$jobOrder) {
+                session()->flash('error', 'Job order not found.');
+                return;
+            }
+
+            // Check if there's actually a pending request
+            if (!$jobOrder->qty_update_requested) {
+                session()->flash('error', 'No pending request to cancel.');
+                DB::rollBack();
+                return;
+            }
+
+            // Clear the request flags
+            $jobOrder->qty_update_requested = false;
+            $jobOrder->qty_update_requested_by = null;
+            $jobOrder->qty_update_requested_at = null;
+            $jobOrder->save();
+
+            DB::commit();
+
+            // Update component state
+            $this->hasPendingQtyUpdateRequest = false;
+            $this->qtyUpdateApproved = false;
+
+            session()->flash('success', 'Dispatch request has been cancelled successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Failed to cancel request: ' . $e->getMessage());
+        }
+    }
+
     public function render()
     {
         $bodyAttributes = 'x-data="{ page: \'jobOrder\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
