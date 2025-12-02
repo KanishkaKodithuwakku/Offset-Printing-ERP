@@ -1430,10 +1430,13 @@ class JobOrderForm extends Component
                 ->where('id', '!=', $dispatchItem->id)
                 ->sum('quantity');
 
-            // The new quantity entered represents additional quantity to dispatch
-            // Example: If current dispatched is 7, and user enters 5, it means add 5 more
-            // So: new total dispatched = existing dispatched (excluding this item) + new quantity entered
+            // Get the old dispatch item quantity before update
             $oldDispatchItemQty = $dispatchItem->quantity;
+            
+            // Calculate the new total dispatched quantity
+            // newTotalDispatched = (current total excluding this item) + new quantity
+            // Example: If other items dispatched 0, this item was 12, and user changes to 14:
+            // newTotalDispatched = 0 + 14 = 14
             $newTotalDispatched = $currentTotalDispatchedExcludingThis + $newQuantity;
             
             // Update the dispatch item quantity to the new value (this represents additional qty)
@@ -1455,13 +1458,50 @@ class JobOrderForm extends Component
             $oldJobOrderItemQty = $jobOrderItem->quantity;
             $jobOrderItem->quantity = $newTotalDispatched;
             $jobOrderItem->total = $jobOrderItem->price * $newTotalDispatched;
+            
+            // If job order item was fully dispatched and now has a balance, change status back
+            if ($jobOrderItem->status === 'dispatched' && $newTotalDispatched > $currentTotalDispatchedExcludingThis) {
+                // There's now a balance to dispatch, so change status back to pending or appropriate status
+                $jobOrderItem->status = 'pending'; // or 'printing' depending on workflow
+            }
             $jobOrderItem->save();
 
-            // Update job order total amount
+            // Update job order total amount and status
             $jobOrder = JobOrder::find($this->jobOrderId);
             if ($jobOrder) {
                 $totalAmount = JobOrderItem::where('order_id', $this->jobOrderId)->sum('total');
                 $jobOrder->total_amount = $totalAmount;
+                
+                // If status was 'dispatched' and we increased dispatched quantity, change back to 'dispatching'
+                // This happens when user adds more quantity to dispatch
+                if ($jobOrder->status === 'dispatched') {
+                    // Check if there's now a balance to dispatch
+                    $allItemsFullyDispatched = true;
+                    $jobOrderItems = JobOrderItem::where('order_id', $this->jobOrderId)->get();
+                    foreach ($jobOrderItems as $item) {
+                        $itemDispatchedQty = DB::table('dispatch_items')
+                            ->where('job_order_item_id', $item->id)
+                            ->sum('quantity');
+                        if ($itemDispatchedQty < $item->quantity) {
+                            $allItemsFullyDispatched = false;
+                            break;
+                        }
+                    }
+                    
+                    // If not all items are fully dispatched, change status back to 'dispatching'
+                    if (!$allItemsFullyDispatched) {
+                        $jobOrder->status = 'dispatching';
+                        // Update previous_status to remember it was dispatched
+                        if (!$jobOrder->previous_status || $jobOrder->previous_status === 'dispatched') {
+                            $jobOrder->previous_status = 'dispatched';
+                        }
+                    }
+                } else {
+                    // Use the model's updateDispatchStatus method to handle status updates
+                    $jobOrder->fresh(); // Reload relationships
+                    $jobOrder->updateDispatchStatus();
+                }
+                
                 $jobOrder->save();
             }
 
@@ -1475,10 +1515,13 @@ class JobOrderForm extends Component
             // Reload job order items to reflect updated quantities
             $jobOrder = JobOrder::with('orderItems', 'orderItems.item')->find($this->jobOrderId);
             if ($jobOrder) {
+                // Update component status to reflect changes
+                $this->status = $jobOrder->status;
+                $this->previous_status = $jobOrder->previous_status;
+                
                 $this->jobOrderItems = $jobOrder->orderItems->map(function ($item) {
                     $dispatchedCount = DB::table('dispatch_items')
-                        ->where('order_id', $item->order_id)
-                        ->where('item_id', $item->item_id)
+                        ->where('job_order_item_id', $item->id)
                         ->sum('quantity');
 
                     return [
@@ -1488,7 +1531,7 @@ class JobOrderForm extends Component
                         'code' => $item->item->item_code ?? '',
                         'selling_price' => $item->price,
                         'purchase_price' => $item->item->purchase_price ?? 0,
-                        'quantity' => $item->quantity - $dispatchedCount,
+                        'quantity' => $item->quantity - $dispatchedCount, // This will show the balance (e.g., 14-12=2)
                         'dispatchedCount' => $dispatchedCount,
                         'total' => $item->total,
                     ];
