@@ -332,6 +332,7 @@
                         </svg>
                         Update Qty to Dispatched
                     </button>
+                @endif
             @endif
 
             @if ($dispatchStatus === 'complete')
