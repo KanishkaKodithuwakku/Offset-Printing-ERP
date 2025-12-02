@@ -1372,27 +1372,57 @@ class JobOrderForm extends Component
      */
     public function updateDispatchItemQuantity($dispatchItemId, $newQuantity)
     {
+        DB::beginTransaction();
+        
         try {
-            $dispatchItem = DispatchItem::find($dispatchItemId);
+            // Load dispatch item with item relationship
+            $dispatchItem = DispatchItem::with('item')->find($dispatchItemId);
             
             if (!$dispatchItem) {
                 session()->flash('error', 'Dispatch item not found.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
                 return;
             }
 
-            // Validate quantity
+            // Validate and convert quantity
+            if (empty($newQuantity) || $newQuantity === '') {
+                session()->flash('error', 'Quantity cannot be empty.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            $newQuantity = (int)$newQuantity;
+
             if ($newQuantity < 0) {
                 session()->flash('error', 'Quantity cannot be negative.');
-                // Reload to reset the value
+                DB::rollBack();
                 $this->mount($this->jobOrderId);
                 return;
             }
 
             // Update the dispatch item quantity
             $oldQuantity = $dispatchItem->quantity;
-            $dispatchItem->quantity = (int)$newQuantity;
-            $dispatchItem->total_amount = $dispatchItem->quantity * ($dispatchItem->item->sales_price ?? 0);
+            $dispatchItem->quantity = $newQuantity;
+            
+            // Recalculate total amount based on the item's sales price
+            // Get price from the item relationship or from job order item
+            $price = 0;
+            if ($dispatchItem->item) {
+                $price = $dispatchItem->item->sales_price ?? 0;
+            } else {
+                // Fallback: get price from job order item
+                $jobOrderItem = JobOrderItem::find($dispatchItem->job_order_item_id);
+                if ($jobOrderItem) {
+                    $price = $jobOrderItem->price ?? 0;
+                }
+            }
+            
+            $dispatchItem->total_amount = $newQuantity * $price;
             $dispatchItem->save();
+
+            DB::commit();
 
             // Reload dispatched items to reflect changes
             $this->dispatchedItems = DispatchItem::with('item')
@@ -1407,8 +1437,15 @@ class JobOrderForm extends Component
             $this->hasDispatchedItems = $this->dispatchedCount > 0;
             $this->isFullyDispatched = $this->checkIfFullyDispatched($this->jobOrderId);
 
-            session()->flash('success', 'Dispatch item quantity updated successfully.');
+            session()->flash('success', 'Dispatch item quantity updated successfully from ' . $oldQuantity . ' to ' . $newQuantity . '.');
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::channel('job_order_log')->error('Error updating dispatch item quantity', [
+                'dispatch_item_id' => $dispatchItemId,
+                'new_quantity' => $newQuantity,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Failed to update dispatch item quantity: ' . $e->getMessage());
             // Reload to reset on error
             $this->mount($this->jobOrderId);

@@ -784,8 +784,9 @@
                                 <div class="flex items-center">
                                     <input type="number" 
                                         value="{{ $dispatchedItem->quantity }}"
-                                        wire:change="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
+                                        wire:blur="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
                                         min="0"
+                                        step="1"
                                         class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400">
                                 </div>
                             </td>
