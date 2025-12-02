@@ -782,9 +782,12 @@
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        {{ $dispatchedItem->quantity }}
-                                    </p>
+                                    <input type="number" 
+                                        value="{{ $dispatchedItem->jobOrderItem->quantity ?? $dispatchedItem->quantity }}"
+                                        wire:blur="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
+                                        min="0"
+                                        step="1"
+                                        class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400">
                                 </div>
                             </td>
 
