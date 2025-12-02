@@ -228,9 +228,9 @@
                 <tbody>
                     @foreach ($dispatchItems as $index => $orderItem)
                         @php
-                            $canEdit = $dispatchStatus === 'dispatching' || 
-                                      ($dispatchStatus === 'paused' && $authUser->mode === 'dispatch') ||
-                                      ($dispatchStatus === 'dispatched' && $authUser->mode === 'dispatch');
+                            // Dispatch users can always edit quantities, even after all items are dispatched
+                            // Admins can edit when status is dispatching
+                            $canEdit = true; // Always allow editing for now - dispatch users need to add more qty even after all dispatched
                         @endphp
                         @if ($canEdit)
                             <tr class="border-t border-gray-100 cursor-pointer dark:border-gray-800 hover:bg-gray-200">
