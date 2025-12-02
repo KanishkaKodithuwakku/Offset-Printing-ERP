@@ -332,31 +332,6 @@
                         </svg>
                         Update Qty to Dispatched
                     </button>
-                @elseif ($authUser->mode === 'dispatch')
-                    @if ($hasPendingQtyUpdateRequest)
-                        <button disabled
-                            class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
-                            <svg class="w-6 h-6" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            Request Pending
-                        </button>
-                    @else
-                                <button wire:click="$set('showRequestQtyModal', true)"
-                                    class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                            <svg class="w-6 h-6 text-white dark:text-white" aria-hidden="true"
-                                xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4" />
-                            </svg>
-                            Request Admin to Update Qty
-                        </button>
-                    @endif
-                @endif
             @endif
 
             @if ($dispatchStatus === 'complete')

@@ -1282,10 +1282,42 @@ class JobOrderForm extends Component
             $jobOrder->fresh();
             $jobOrder->updateDispatchStatus();
 
-            // Update all dispatch items status to 'dispatched'
-            DB::table('dispatch_items')
+            // Consolidate dispatch items: merge multiple dispatch items for the same job_order_item_id into one
+            // Group by job_order_item_id and merge quantities
+            $dispatchItemsByJobOrderItem = DB::table('dispatch_items')
                 ->where('order_id', $jobOrderId)
-                ->update(['status' => 'dispatched']);
+                ->select('job_order_item_id', DB::raw('SUM(quantity) as total_quantity'), DB::raw('SUM(total_amount) as total_amount_sum'))
+                ->groupBy('job_order_item_id')
+                ->get();
+
+            foreach ($dispatchItemsByJobOrderItem as $group) {
+                // Get all dispatch items for this job_order_item_id
+                $dispatchItems = DispatchItem::where('order_id', $jobOrderId)
+                    ->where('job_order_item_id', $group->job_order_item_id)
+                    ->orderBy('id')
+                    ->get();
+
+                if ($dispatchItems->count() > 1) {
+                    // Keep the first one and update it with total quantity
+                    $firstItem = $dispatchItems->first();
+                    $firstItem->quantity = $group->total_quantity;
+                    $firstItem->total_amount = $group->total_amount_sum;
+                    $firstItem->status = 'dispatched';
+                    $firstItem->save();
+
+                    // Delete the rest
+                    $dispatchItems->skip(1)->each(function ($item) {
+                        $item->delete();
+                    });
+                } else {
+                    // Just update status if only one record
+                    $firstItem = $dispatchItems->first();
+                    if ($firstItem) {
+                        $firstItem->status = 'dispatched';
+                        $firstItem->save();
+                    }
+                }
+            }
 
             // Update all dispatch notes status
             DB::table('dispatch_notes')
