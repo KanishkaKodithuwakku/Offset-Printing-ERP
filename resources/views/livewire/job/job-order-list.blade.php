@@ -486,7 +486,7 @@
                                             </svg>
                                         </a>
                                         @elseif (($jobOrder->status === 'printing' || $jobOrder->status ===
-                                        'dispatching' || $jobOrder->status === 'dispatched') && $role === 'dispatch' && !($jobOrder->isFullyDispatched ?? false))
+                                        'dispatching' || $jobOrder->status === 'dispatched') && $role === 'dispatch')
                                         <a @click="showConfirmEdit = true"
                                             class="px-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                                             title="Edit" >

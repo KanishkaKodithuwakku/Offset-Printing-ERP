@@ -141,11 +141,8 @@ class JobOrderForm extends Component
             // Check if all items are fully dispatched
             $this->isFullyDispatched = $this->checkIfFullyDispatched($jobOrderId);
             
-            // Prevent dispatch users from editing when all items are fully dispatched
-            if ($this->authUser->mode === 'dispatch' && $this->isFullyDispatched) {
-                session()->flash('error', 'You cannot edit this job order because all items have been fully dispatched.');
-                return redirect()->route('job-orders');
-            }
+            // Note: Removed validation that prevented dispatch users from editing fully dispatched job orders
+            // Dispatch users can now continuously edit job order quantities even if all items are fully dispatched
             
             // Update debug log with correct values
             Log::channel('job_order_log')->debug('JobOrderForm mount - After checking dispatched items', [
