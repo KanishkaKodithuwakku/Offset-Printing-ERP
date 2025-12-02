@@ -98,6 +98,7 @@ class DispatchItem extends Component
                 ->exists();
 
             //Load dispatch items with remaining balance
+            // Include all items even if fully dispatched, so users can add more quantity
             $this->dispatchItems = [];
 
             foreach ($this->jobOrder->orderItems as $orderItem) {
@@ -109,24 +110,24 @@ class DispatchItem extends Component
 
                 $item = Item::find($orderItem->item_id);
 
-                if ($dispatchBalance > 0) {
-                    $this->dispatchItems[] = [
-                        'item_id' => $orderItem->item_id,
-                        'item_name' => $item?->item_name ?? 'Unknown',
-                        'item_code' => $item?->item_code ?? null,
-                        'job_order_item_id' => $orderItem->id,
-                        'dispatch_id' => null,
-                        'order_id' => $orderItem->order_id,
-                        'quantity' => $dispatchBalance,
-                        'dispatchBalance' => $dispatchBalance,
-                        'price' => $orderItem->price,
-                        'purchase_price' => $item?->purchase_price ?? 0,
-                        'sales_price' => $item?->sales_price ?? 0,
-                        'total_amount' => $orderItem->price * $dispatchBalance,
-                        'item_name' => $orderItem->item->item_name ?? 'Unknown',
-                        'status' => $orderItem->status,
-                    ];
-                }
+                // Include items even if fully dispatched (dispatchBalance <= 0) so users can add more
+                // For fully dispatched items, set quantity to 0 so they can enter new quantity
+                $this->dispatchItems[] = [
+                    'item_id' => $orderItem->item_id,
+                    'item_name' => $item?->item_name ?? 'Unknown',
+                    'item_code' => $item?->item_code ?? null,
+                    'job_order_item_id' => $orderItem->id,
+                    'dispatch_id' => null,
+                    'order_id' => $orderItem->order_id,
+                    'quantity' => $dispatchBalance > 0 ? $dispatchBalance : 0,
+                    'dispatchBalance' => $dispatchBalance,
+                    'price' => $orderItem->price,
+                    'purchase_price' => $item?->purchase_price ?? 0,
+                    'sales_price' => $item?->sales_price ?? 0,
+                    'total_amount' => $orderItem->price * ($dispatchBalance > 0 ? $dispatchBalance : 0),
+                    'item_name' => $orderItem->item->item_name ?? 'Unknown',
+                    'status' => $orderItem->status,
+                ];
             }
         }
     }
