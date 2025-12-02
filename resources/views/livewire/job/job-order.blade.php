@@ -783,7 +783,7 @@
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <input type="number" 
-                                        value="{{ $dispatchedItem->quantity }}"
+                                        value="{{ $dispatchedItem->jobOrderItem->quantity ?? $dispatchedItem->quantity }}"
                                         wire:blur="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
                                         min="0"
                                         step="1"
