@@ -783,14 +783,14 @@
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
                                     <input type="number" 
-                                        value="{{ $dispatchedItem->jobOrderItem->quantity }}"
+                                        value="{{ $dispatchedItem->quantity }}"
                                         wire:blur="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
                                         min="0"
                                         step="1"
                                         class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400"
-                                        title="Job Order Quantity (editable)">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400" title="Actual Dispatched Quantity">
-                                        (Dispatched: {{ $dispatchedItem->quantity }})
+                                        title="Dispatched Quantity (editable)">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400" title="Job Order Quantity">
+                                        (Total: {{ $dispatchedItem->jobOrderItem->quantity }})
                                     </span>
                                 </div>
                             </td>
