@@ -1427,6 +1427,157 @@ class JobOrderForm extends Component
     }
 
     /**
+     * Update job order item quantity (total quantity)
+     * When user edits the total quantity, it updates the job order item quantity
+     * This allows adding more quantity even after all items are dispatched
+     */
+    public function updateJobOrderItemQuantity($jobOrderItemId, $newQuantity)
+    {
+        // Set flag to prevent modal from appearing during quantity edit
+        $this->isEditingDispatchQty = true;
+        
+        DB::beginTransaction();
+        
+        try {
+            // Load job order item
+            $jobOrderItem = JobOrderItem::with('item')->find($jobOrderItemId);
+            
+            if (!$jobOrderItem) {
+                session()->flash('error', 'Job order item not found.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            // Validate and convert quantity
+            if (empty($newQuantity) || $newQuantity === '') {
+                session()->flash('error', 'Quantity cannot be empty.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            $newQuantity = (int)$newQuantity;
+
+            if ($newQuantity < 0) {
+                session()->flash('error', 'Quantity cannot be negative.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            // Get current total dispatched quantity for this job order item
+            $currentTotalDispatched = DB::table('dispatch_items')
+                ->where('job_order_item_id', $jobOrderItemId)
+                ->sum('quantity');
+
+            // Prevent updating to 0 if no items have been dispatched
+            if ($newQuantity == 0 && $currentTotalDispatched == 0) {
+                session()->flash('error', 'Cannot update quantity to 0. At least one item must be dispatched before the quantity can be set to 0.');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            // Prevent reducing quantity below dispatched quantity
+            if ($newQuantity < $currentTotalDispatched) {
+                session()->flash('error', 'Quantity cannot be less than the dispatched quantity (' . $currentTotalDispatched . ').');
+                DB::rollBack();
+                $this->mount($this->jobOrderId);
+                return;
+            }
+
+            $oldQuantity = $jobOrderItem->quantity;
+            
+            // Update job order item quantity
+            $jobOrderItem->quantity = $newQuantity;
+            $jobOrderItem->total = $jobOrderItem->price * $newQuantity;
+            
+            // Update status: if there's a balance to dispatch, set to pending
+            if ($newQuantity > $currentTotalDispatched) {
+                // There's a balance to dispatch, so change status to pending
+                $jobOrderItem->status = 'pending';
+            } elseif ($newQuantity == $currentTotalDispatched && $currentTotalDispatched > 0) {
+                // Fully dispatched
+                $jobOrderItem->status = 'dispatched';
+            }
+            $jobOrderItem->save();
+
+            // Update job order total amount and status
+            $jobOrder = JobOrder::find($this->jobOrderId);
+            if ($jobOrder) {
+                $totalAmount = JobOrderItem::where('order_id', $this->jobOrderId)->sum('total');
+                $jobOrder->total_amount = $totalAmount;
+                
+                // Check if there's now a balance to dispatch (job order qty > dispatched qty)
+                $allItemsFullyDispatched = true;
+                $jobOrderItems = JobOrderItem::where('order_id', $this->jobOrderId)->get();
+                foreach ($jobOrderItems as $item) {
+                    $itemDispatchedQty = DB::table('dispatch_items')
+                        ->where('job_order_item_id', $item->id)
+                        ->sum('quantity');
+                    if ($itemDispatchedQty < $item->quantity) {
+                        $allItemsFullyDispatched = false;
+                        break;
+                    }
+                }
+                
+                // If status was 'dispatched' and there's now a balance, change back to 'dispatching'
+                if ($jobOrder->status === 'dispatched' && !$allItemsFullyDispatched) {
+                    $jobOrder->status = 'dispatching';
+                    // Update previous_status to remember it was dispatched
+                    if (!$jobOrder->previous_status || $jobOrder->previous_status === 'dispatched') {
+                        $jobOrder->previous_status = 'dispatched';
+                    }
+                } else {
+                    // Use the model's updateDispatchStatus method to handle status updates
+                    $jobOrder->updateDispatchStatus();
+                }
+                $jobOrder->save();
+            }
+
+            DB::commit();
+
+            // Reload dispatched items and job order items to reflect changes
+            $this->dispatchedItems = DispatchItem::with('item', 'jobOrderItem')
+                ->where('order_id', $this->jobOrderId)
+                ->get();
+            
+            // Reload job order items array
+            $jobOrder = JobOrder::with('orderItems', 'customer', 'orderItems.item')->find($this->jobOrderId);
+            $this->jobOrderItems = $jobOrder->orderItems->map(function ($item) {
+                $dispatchedCount = DB::table('dispatch_items')
+                    ->where('job_order_item_id', $item->id)
+                    ->sum('quantity');
+
+                return [
+                    'id' => $item->id,
+                    'item_id' => $item->item_id,
+                    'name' => $item->item->item_name ?? '',
+                    'code' => $item->item->item_code ?? '',
+                    'selling_price' => $item->price,
+                    'purchase_price' => $item->item->purchase_price ?? 0,
+                    'quantity' => $item->quantity - $dispatchedCount,
+                    'dispatchedCount' => $dispatchedCount,
+                    'total' => $item->total,
+                ];
+            })->toArray();
+
+            // Reset the flag after successful update
+            $this->isEditingDispatchQty = false;
+
+            $balanceToDispatch = $newQuantity - $currentTotalDispatched;
+            session()->flash('success', 'Total quantity updated successfully from ' . $oldQuantity . ' to ' . $newQuantity . '. Balance to dispatch: ' . $balanceToDispatch . '.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Reset the flag even on error
+            $this->isEditingDispatchQty = false;
+            session()->flash('error', 'Failed to update total quantity: ' . $e->getMessage());
+            $this->mount($this->jobOrderId);
+        }
+    }
+
+    /**
      * Update dispatch item quantity
      * When user edits the dispatched quantity, it adds to existing dispatched quantity
      * and updates the job order item quantity accordingly
