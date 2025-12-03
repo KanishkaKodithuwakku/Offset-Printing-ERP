@@ -757,7 +757,12 @@
                             </th>
                             <th class="py-2 font-normal whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Quantity</p>
+                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Dispatched Qty</p>
+                                </div>
+                            </th>
+                            <th class="py-2 font-normal whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Total Qty</p>
                                 </div>
                             </th>
 
@@ -781,17 +786,19 @@
                                 </div>
                             </td>
                             <td class="py-1 whitespace-nowrap">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center">
                                     <input type="number" 
                                         value="{{ $dispatchedItem->quantity }}"
-                                        wire:blur="updateDispatchItemQuantity({{ $dispatchedItem->id }}, $event.target.value)"
-                                        min="0"
-                                        step="1"
-                                        class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400"
-                                        title="Dispatched Quantity (editable)">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400" title="Job Order Quantity">
-                                        (Total: {{ $dispatchedItem->jobOrderItem->quantity }})
-                                    </span>
+                                        disabled
+                                        class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400 bg-gray-100 cursor-not-allowed"
+                                        title="Dispatched Quantity (read-only)">
+                                </div>
+                            </td>
+                            <td class="py-1 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                        {{ $dispatchedItem->jobOrderItem->quantity }}
+                                    </p>
                                 </div>
                             </td>
 
