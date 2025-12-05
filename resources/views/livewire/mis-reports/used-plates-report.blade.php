@@ -70,7 +70,8 @@
                         <thead class="h-10 bg-gray-100">
                             <tr>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Plate Name</th>
-                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Plate Code</th>
+                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Job Number</th>
+                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Job Description</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Dispatch Number</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Customer Name</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Quantity Used</th>
@@ -85,20 +86,21 @@
                                 @endphp
                                 <tr class="border-b border-gray-200">
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->item_name }}</td>
-                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->item_code }}</td>
+                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->job_number ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->job_description ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->dispatch_number ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->customer_name ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ number_format($quantity) }}</td>
                                 </tr>
                             @empty
                                 <tr class="border-b border-gray-200">
-                                    <td colspan="5" class="px-3 py-2 text-xs text-center text-gray-500">No used plates found for selected filters.</td>
+                                    <td colspan="6" class="px-3 py-2 text-xs text-center text-gray-500">No used plates found for selected filters.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         <tfoot>
                             <tr class="bg-gray-100">
-                                <td colspan="4" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
+                                <td colspan="5" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
                                 <td class="px-3 py-2 text-xs font-semibold text-left">{{ number_format($totalUsed) }}</td>
 
                             </tr>

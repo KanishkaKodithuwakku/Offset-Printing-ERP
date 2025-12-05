@@ -65,12 +65,12 @@ class UsedPlatesReport extends Component
             ->leftJoin('customers as c', 'c.id', '=', 'jo.customer_id') // Get customer name
             ->select(
                 'i.id as item_id',
-                'i.item_code',
                 'i.item_name',
                 'di.quantity', // Dispatched quantity from dispatch_items table
                 'di.created_at as used_date',
                 'dn.dispatch_number',
                 'jo.job_number',
+                'jo.description as job_description',
                 'c.name as customer_name',
                 'di.dispatch_id'
             )
