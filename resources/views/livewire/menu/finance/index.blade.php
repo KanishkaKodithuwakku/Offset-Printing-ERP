@@ -65,7 +65,19 @@
                                 </span>
                             </span>
                         </a> --}}
-                        <a href="https://finance.mastergraphicslk.com/wzusers/login" target="_blank" class="menu-dropdown-item group"
+                        {{-- <a href="https://finance.mastergraphicslk.com/wzusers/login" target="_blank" class="menu-dropdown-item group"
+                            :class="page === 'ChartOfAccount' ? 'menu-dropdown-item-active' :
+                                'menu-dropdown-item-inactive'">
+                            Accounts administration
+                            <span class="absolute flex items-center gap-1 right-3">
+                                <span class="menu-dropdown-badge"
+                                    :class="page === 'ChartOfAccount' ? 'menu-dropdown-badge-active' :
+                                        'menu-dropdown-badge-inactive'">
+
+                                </span>
+                            </span>
+                        </a> --}}
+                        <a href="{{ config('app.acc_url') }}" target="_blank" class="menu-dropdown-item group"
                             :class="page === 'ChartOfAccount' ? 'menu-dropdown-item-active' :
                                 'menu-dropdown-item-inactive'">
                             Accounts administration

@@ -33,4 +33,5 @@ class InvoiceItem extends Model
     {
         return $this->belongsTo(Item::class); // Assuming you have a Product model
     }
+
 }

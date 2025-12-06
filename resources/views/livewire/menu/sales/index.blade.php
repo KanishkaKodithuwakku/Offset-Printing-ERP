@@ -119,7 +119,7 @@
                             :class="(selected === 'Job') ? 'block' : 'hidden'">
                             <ul :class="sidebarToggle ? 'lg:hidden' : 'flex'"
                                 class="menu-dropdown mt- flex flex-col pl-9">
-                                @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'design')
+                                @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'design' || auth()->user()->mode === 'manager')
                                     <li>
                                         <a wire:navigate href="{{ route('job-order') }}"
                                             class="menu-dropdown-item group"

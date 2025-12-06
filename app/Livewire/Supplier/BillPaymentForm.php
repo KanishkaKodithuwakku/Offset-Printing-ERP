@@ -14,6 +14,7 @@ use App\Models\VendorBill;
 use App\Models\VendorBillPayment;
 use App\Models\BankAccount;
 use App\Models\VendorPayment;
+use App\Models\BillDeletionApproval;
 use App\Helpers\NumberGenerator;
 use Illuminate\Support\Carbon;
 
@@ -45,6 +46,9 @@ class BillPaymentForm extends Component
     public $highlightedBillId = null;
     public $totalAmountToPay = 0;
     public $validForm = false;
+    public $showDeleteModal = false;
+    public $deletionReason = '';
+    public $searchTerm = '';
 
     public function mount()
     {
@@ -111,6 +115,11 @@ class BillPaymentForm extends Component
         $this->loadBills();
     }
 
+    public function updatedSearchTerm($value)
+    {
+        $this->loadBills();
+    }
+
     public function loadBills()
     {
         $query = VendorBill::with(['vendor', 'payments'])->where('payment_status', 'unpaid');
@@ -124,14 +133,33 @@ class BillPaymentForm extends Component
             $query->where('vendor_id', $this->selectedVendor);
         }
 
+        // Search functionality
+        if (!empty(trim($this->searchTerm ?? ''))) {
+            $searchTerm = trim($this->searchTerm);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('ref_no', 'like', '%' . $searchTerm . '%')
+                  ->orWhereHas('vendor', function ($vendorQuery) use ($searchTerm) {
+                      $vendorQuery->where('name', 'like', '%' . $searchTerm . '%');
+                  });
+            });
+        }
+
         if ($this->sortBy) {
             $query->orderBy($this->sortBy);
         }
 
+        // Get pending deletion approvals for bills
+        $billIds = $query->pluck('id');
+        $pendingDeletions = BillDeletionApproval::whereIn('vendor_bill_id', $billIds)
+            ->where('status', 'pending')
+            ->pluck('vendor_bill_id')
+            ->toArray();
+
         // Get the bills and calculate amount_to_pay
-        $this->bills = $query->get()->map(function ($bill) {
+        $this->bills = $query->get()->map(function ($bill) use ($pendingDeletions) {
             $totalPayments = $bill->payments->sum('total_amount'); // Calculate total payments made
             $bill->amount_to_pay = max(0, $bill->total_amount - $totalPayments); // Calculate amount to pay
+            $bill->has_pending_deletion = in_array($bill->id, $pendingDeletions); // Check if bill has pending deletion
             return $bill;
         });
 
@@ -141,6 +169,16 @@ class BillPaymentForm extends Component
 
     public function toggleSelectedBill($billId)
     {
+        // Check if bill has pending deletion approval
+        $hasPendingDeletion = BillDeletionApproval::where('vendor_bill_id', $billId)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPendingDeletion) {
+            session()->flash('error', 'This bill has a pending deletion approval and cannot be selected.');
+            return;
+        }
+
         // Find the bill in the bills collection to get the amount_to_pay
         $bill = VendorBill::find($billId);
         $amountToPay = $bill ? $bill->total_amount : 0;
@@ -171,6 +209,65 @@ class BillPaymentForm extends Component
     public function updatedSelectedBills()
     {
         $this->loadBills();  // Recalculate total amount to pay
+    }
+
+    public function openDeleteModal()
+    {
+        if (empty($this->selectedBills) || !is_array($this->selectedBills)) {
+            session()->flash('error', 'Please select at least one bill to delete.');
+            return;
+        }
+        $this->showDeleteModal = true;
+        $this->deletionReason = '';
+    }
+
+    public function closeDeleteModal()
+    {
+        $this->showDeleteModal = false;
+        $this->deletionReason = '';
+    }
+
+    public function submitSelectedBillsForDeletion()
+    {
+        if (empty($this->selectedBills) || !is_array($this->selectedBills)) {
+            session()->flash('error', 'Please select at least one bill to delete.');
+            $this->closeDeleteModal();
+            return;
+        }
+
+        try {
+            foreach ($this->selectedBills as $billId => $amount) {
+                // Check if bill already has a pending deletion request
+                $existingApproval = BillDeletionApproval::where('vendor_bill_id', $billId)
+                    ->where('status', 'pending')
+                    ->first();
+
+                if (!$existingApproval) {
+                    $bill = VendorBill::with('vendor')->find($billId);
+                    BillDeletionApproval::create([
+                        'vendor_bill_id' => $billId,
+                        'bill_date' => $bill->date ?? null,
+                        'vendor_name' => $bill->vendor ? $bill->vendor->name : null,
+                        'ref_no' => $bill->ref_no ?? null,
+                        'total_amount' => $bill->total_amount ?? null,
+                        'requested_by' => auth()->id(),
+                        'reason' => $this->deletionReason,
+                        'status' => 'pending',
+                    ]);
+                }
+            }
+
+            // Clear selections and close modal
+            $this->selectedBills = [];
+            $this->totalAmountToPay = 0;
+            $this->closeDeleteModal();
+            $this->loadBills();
+
+            session()->flash('success', 'Selected bills have been submitted for deletion approval.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'An error occurred while submitting bills for deletion: ' . $e->getMessage());
+            $this->closeDeleteModal();
+        }
     }
 
     public $rules = [

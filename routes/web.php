@@ -62,6 +62,7 @@ use App\Livewire\Stock\StockAdjustmentForm;
 use App\Livewire\Stock\StockAdjustmentList;
 use App\Livewire\Supplier\VendorBillCreate;
 use App\Livewire\Admin\DamagedItemApprovals;
+use App\Livewire\Admin\BillDeletionApprovals;
 use App\Livewire\Customer\CustomerOrderForm;
 use App\Livewire\Customer\CustomerOrderList;
 use App\Livewire\Reports\TrialBalanceReport;
@@ -72,6 +73,8 @@ use App\Livewire\Reports\StockMovementReport;
 use App\Livewire\Transaction\TransactionList;
 use App\Livewire\Customer\PrintPaymentReceipt;
 use App\Livewire\Customer\CustomerOrderDetails;
+use App\Livewire\OtherExpense\OtherExpenseCreate;
+use App\Livewire\OtherExpense\OtherExpenseList;
 
 use App\Livewire\Reports\LedgerStatementReport;
 use App\Livewire\MisReports\SalesDatewiseReport;
@@ -149,6 +152,10 @@ Route::middleware([
     Route::get('/uoms/create', UomForm::class)->name('uoms.create');
     Route::get('/uoms/{uomId}/edit', UomForm::class)->name('uoms.edit');
 
+    Route::get('/other-expenses', OtherExpenseList::class)->name('other-expenses');
+    Route::get('/other-expenses/create', OtherExpenseCreate::class)->name('other-expense.create');
+    Route::get('/other-expenses/{expenseId}/edit', OtherExpenseCreate::class)->name('other-expense.edit');
+
     Route::get('/dispatch-item/{orderId}', DispatchItem::class)->name('dispatch-items');
     Route::get('/print', PrintPreview::class)->name('print-items');
 
@@ -195,6 +202,7 @@ Route::middleware([
     Route::get('/damaged-items/report', DamagedItemForm::class)->name('damaged-items.report');
     Route::get('/admin/damaged-items', DamagedItemApprovals::class)->name('admin.damaged-items');
     Route::get('/admin/damaged-list', DamagedItemList::class)->name('admin.damaged-list');
+    Route::get('/admin/bill-deletion-approvals', BillDeletionApprovals::class)->name('admin.bill-deletion-approvals');
 
     Route::get('/stock-adjustment', StockAdjustmentForm::class)->name('stock.adjustment');
     Route::get('/stock-adjustments', StockAdjustmentList::class)->name('stock-adjustments.index');
@@ -220,6 +228,10 @@ Route::middleware([
         ->name('mis-reports.customer-wise-sales-report');
     Route::get('/mis-reports/customer-wise-sales-report/print', \App\Livewire\MisReports\CustomerWiseSalesReportPrint::class)
         ->name('mis-reports.customer-wise-sales-report.print');
+    Route::get('/mis-reports/used-plates-report', App\Livewire\MisReports\UsedPlatesReport::class)
+        ->name('mis-reports.used-plates-report');
+    Route::get('/mis-reports/plate-summary-report', App\Livewire\MisReports\PlateSummaryReport::class)
+        ->name('mis-reports.plate-summary-report');
 
     Route::get('/mis-reports/sales-datewise-report/print', App\Livewire\MisReports\SalesDatewiseReportPrint::class)->name('mis-reports.sales-datewise-report.print');
 
@@ -257,6 +269,10 @@ Route::get('/monthly-targets', \App\Livewire\MonthlyTarget\MonthlyTargetList::cl
 Route::get('/monthly-targets/create', \App\Livewire\MonthlyTarget\MonthlyTargetForm::class)->name('monthly-targets.create');
 Route::get('/monthly-targets/{id}/edit', \App\Livewire\MonthlyTarget\MonthlyTargetEdit::class)->name('monthly-targets.edit');
 
-
+// Database Backup Routes
+Route::get('/database-backup', App\Livewire\Admin\DatabaseBackup::class)->name('admin.database.backup');
+Route::get('/database-backup/list', App\Livewire\Admin\BackupList::class)->name('admin.database.backup.list');
+Route::get('/database-backup/download/{file}', [App\Http\Controllers\Admin\BackupController::class, 'download'])->name('admin.database.backup.download');
+Route::delete('/database-backup/delete/{file}', [App\Http\Controllers\Admin\BackupController::class, 'delete'])->name('admin.database.backup.delete');
 
 });

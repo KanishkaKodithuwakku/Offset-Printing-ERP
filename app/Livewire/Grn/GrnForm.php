@@ -50,8 +50,11 @@ class GrnForm extends Component
     public function updatedSearchSupplier()
     {
         if (strlen($this->searchSupplier) >= 1) {
-            $suppliers = Supplier::where('name', 'like', "{$this->searchSupplier}%")
-                ->orWhere('email', 'like', "%{$this->searchSupplier}%")
+            $suppliers = Supplier::where('status', 'active')
+                ->where(function($query) {
+                    $query->where('name', 'like', "{$this->searchSupplier}%")
+                          ->orWhere('email', 'like', "%{$this->searchSupplier}%");
+                })
                 ->limit(5)
                 ->get();
 
@@ -252,7 +255,7 @@ class GrnForm extends Component
 
 
         return view('livewire.grns.grn-form', [
-            'suppliers' => Supplier::all(),
+            'suppliers' => Supplier::where('status', 'active')->get(),
             'users' => User::all(),
             'branches' => Branch::all(),
             'authUser' =>  $this->user

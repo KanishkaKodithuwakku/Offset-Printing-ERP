@@ -72,6 +72,54 @@
                         <!-- Dropdown Menu End -->
                     </li>
                     <!-- Menu Item Uom -->
+
+                    <!-- Menu Item Other Expenses -->
+                    <li>
+                        <a href="#" @click.prevent="selected = (selected === 'OtherExpenses' ? '':'OtherExpenses')"
+                            class="menu-item group"
+                            :class="(selected === 'OtherExpenses') || (page === 'otherExpenseCreate' || page === 'otherExpenseList') ?
+                            'menu-item-active' : 'menu-item-inactive'">
+
+                            <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">
+                                Other Expenses
+                            </span>
+
+                            <svg class="menu-item-arrow"
+                                :class="[(selected === 'OtherExpenses') ? 'menu-item-arrow-active' : 'menu-item-arrow-inactive',
+                                    sidebarToggle ? 'lg:hidden' : ''
+                                ]"
+                                width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4.79175 7.39584L10.0001 12.6042L15.2084 7.39585" stroke=""
+                                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </a>
+
+                        <!-- Dropdown Menu Start -->
+                        <div class="translate transform overflow-hidden"
+                            :class="(selected === 'OtherExpenses') ? 'block' : 'hidden'">
+                            <ul :class="sidebarToggle ? 'lg:hidden' : 'flex'"
+                                class="menu-dropdown mt-1 flex flex-col pl-9">
+                                <li>
+                                    <a wire:navigate href="{{ route('other-expense.create') }}" class="menu-dropdown-item group"
+                                        :class="page === 'otherExpenseCreate' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                                        Add Other Expense
+                                    </a>
+                                </li>
+                                <li>
+                                    <a wire:navigate href="{{ route('other-expenses') }}" class="menu-dropdown-item group"
+                                        :class="page === 'otherExpenseList' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                                        Other Expenses List
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <!-- Dropdown Menu End -->
+                    </li>
+                    <!-- Menu Item Other Expenses -->
+
                     <!-- Menu Item Monthly Targets -->
                     <li>
                         <a href="#" @click.prevent="selected = (selected === 'MonthlyTargets' ? '' : 'MonthlyTargets')" class="menu-item group"

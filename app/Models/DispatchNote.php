@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DispatchNote extends Model
 {
 
-    protected $fillable = ['job_order_id','dispatch_number', 'quantity','balance_qty','description', 'dispatched_at','user_id'];
+    protected $fillable = ['job_order_id','dispatch_number', 'quantity','balance_qty','description', 'dispatched_at','user_id','status','total_amount'];
 
     public function jobOrder()
     {

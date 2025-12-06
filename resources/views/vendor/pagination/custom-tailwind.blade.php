@@ -27,20 +27,21 @@
                 $current = $paginator->currentPage();
                 $visiblePages = 5;
 
-                $half = floor($visiblePages / 2);
-                $start = max(1, $current - $half);
+                // Calculate start and end based on current page
+                $start = max(1, min($current - 2, $total - $visiblePages + 1));
                 $end = min($total, $start + $visiblePages - 1);
 
-                if ($end - $start + 1 < $visiblePages) {
+                // Adjust start if we're near the end
+                if ($end - $start + 1 < $visiblePages && $start > 1) {
                     $start = max(1, $end - $visiblePages + 1);
                 }
             @endphp
 
             @for ($i = $start; $i <= $end; $i++)
                 <li>
-                    @if ($i === $current)
+                    @if ($i == $current)
                         <span
-                            class="px-4 py-2 font-bold text-blue-700 border-t border-b border-blue-500 bg-gray-100">
+                            class="px-4 py-2 font-bold text-gray-700 bg-gray-200 border-x">
                             {{ $i }}
                         </span>
                     @else
