@@ -25,8 +25,7 @@
                         <div class="overflow-hidden transform translate" :class="(selected === 'GeneralReport') ? 'block' : 'hidden'">
                             <ul :class="sidebarToggle ? 'lg:hidden' : 'flex'" class="flex flex-col mt-1 menu-dropdown pl-9">
 
-
-
+                                @if (auth()->user()->mode !== 'dispatch')
                                 <li>
                                     <a wire:navigate href="{{ route('customer-outstanding') }}" class="menu-dropdown-item group"
                                         :class="page === 'CustomerOutstandingReport' ? 'menu-dropdown-item-active' :
@@ -56,6 +55,7 @@
                                         </span>
                                     </a>
                                 </li>
+                                @endif
 
                                 <li>
                                     <a wire:navigate href="{{ route('mis-reports.used-plates-report') }}" class="menu-dropdown-item group"
@@ -90,6 +90,7 @@
                         </div>
                         <!-- Dropdown Menu End -->
                     </li>
+                    @if (auth()->user()->mode !== 'dispatch')
                     <!-- Sales Report Dropdown -->
                     <li>
                         <a href="#" @click.prevent="selected = (selected === 'SalesReport' ? '' : 'SalesReport')" class="menu-item group"
@@ -126,5 +127,6 @@
                         </div>
                         <!-- Dropdown Menu End -->
                     </li>
+                    @endif
                 </ul>
             </div>
