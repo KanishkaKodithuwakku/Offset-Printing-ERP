@@ -46,7 +46,7 @@
             @include('livewire.menu.finance.index')
             @endif
 
-            @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing' || auth()->user()->mode === 'accounts')
+            @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'billing' || auth()->user()->mode === 'accounts' || auth()->user()->mode === 'dispatch')
             @include('livewire.menu.mis_reports.index')
             @endif
 

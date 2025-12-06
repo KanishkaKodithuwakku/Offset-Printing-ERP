@@ -64,6 +64,21 @@
                         </a>
                     </li>
                     @endif
+
+                    @if (auth()->user()->mode === 'admin' || auth()->user()->mode === 'accounts')
+                      <li>
+                        <a wire:navigate href="{{ route('admin.bill-deletion-approvals') }}" class="menu-dropdown-item group"
+                            :class="page === 'BillDeletionApprovals' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                            Vendor Bill Approvals
+                            <span class="absolute right-3 flex items-center gap-1">
+                                <span class="menu-dropdown-badge" :class="page === 'BillDeletionApprovals' ? 'menu-dropdown-badge-active' :
+                                                    'menu-dropdown-badge-inactive'">
+                                </span>
+                            </span>
+                        </a>
+                    </li>
+                    @endif
                 </ul>
             </div>
             <!-- Dropdown Menu End -->
