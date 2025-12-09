@@ -17,6 +17,8 @@ class StatusHelper
             'designing' => 'Designing - DTP',
             'pending' => 'Pending',
             'dispatching' => 'CTP / Dispatch',
+            'dispatched' => 'Dispatched',
+            'paused' => 'Paused',
             'invoicing' => 'Invoicing',
             'invoiced' => 'Invoiced',
             'ready-to-invoice' => 'Billing',
