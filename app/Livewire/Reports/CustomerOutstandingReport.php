@@ -54,8 +54,8 @@ class CustomerOutstandingReport extends Component
     :class="{\'dark bg-gray-900\': darkMode === true}"';
 
         $query = Invoice::with('order')
-            // Exclude 'cancelled' invoices
-            ->where('status', '!=', 'cancelled')
+            // Exclude 'cancelled' and 'invoicing' invoices
+            ->whereNotIn('status', ['cancelled', 'invoicing'])
             // ->where('payment_status', 'unpaid')
             ->when(
                 $this->searchInvoice,

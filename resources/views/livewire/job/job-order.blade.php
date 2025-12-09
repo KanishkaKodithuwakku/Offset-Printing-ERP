@@ -26,6 +26,34 @@
     </div>
     @endif
 
+    {{-- Information note for admin about pending dispatch request --}}
+    @if ($hasPendingQtyUpdateRequest && $authUser->mode === 'admin' && $jobOrderId)
+    <div class="p-10 py-3 px-6">
+        <div class="rounded-xl border border-brand-500 bg-brand-50 p-4 dark:border-brand-500/30 dark:bg-brand-500/15">
+            <div class="flex items-start gap-3">
+                <div class="-mt-0.5 text-brand-500">
+                    <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+                            fill="#3B82F6"></path>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">
+                        Pending Dispatch Request
+                    </h4>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        A dispatch user has requested to complete the dispatch with current dispatched quantity. Please review the quantities and click the <strong>"Update Qty to Dispatched"</strong> button first to approve this request, then you can save the order.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @if ($errors->any())
     <div class="alert alert-danger">
         <ul>
@@ -363,8 +391,13 @@
                         <!-- Buttons area -->
                         <div
                             class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800 mb-5 pt-2 px-5">
+                            @php
+                                // Disable Save Order button for admin if there's a pending request and not yet approved
+                                $isSaveDisabled = ($hasPendingQtyUpdateRequest && $authUser->mode === 'admin' && !$qtyUpdateApproved);
+                            @endphp
                             <button type="submit" wire:loading.class="opacity-50"
-                                class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 mt-5">
+                                @if($isSaveDisabled) disabled @endif
+                                class="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg shadow-theme-xs mt-5 @if($isSaveDisabled) bg-gray-400 cursor-not-allowed @else bg-brand-500 hover:bg-brand-600 @endif">
                                 <svg class="w-5 h-5 text-white dark:text-white" aria-hidden="true"
                                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                     viewBox="0 0 24 24">
@@ -626,7 +659,89 @@
 
             @if ($jobOrderId && $dispatchedCount > 0)
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-3">
-                <h4>Dispatched Items</h4>
+                <div class="flex justify-between items-center mb-3">
+                    <h4>Dispatched Items</h4>
+                    {{-- Show button if there are dispatched items (count > 0) and job order is in dispatchable state --}}
+                    @php
+                        $currentStatus = $status ?? '';
+                        $prevStatus = $previous_status ?? '';
+                        $isValidStatus = in_array($currentStatus, ['dispatching', 'printing', 'paused']);
+                        $wasValidStatus = in_array($prevStatus, ['dispatching', 'printing']);
+                        $hasDispatchedQty = ($dispatchedCount ?? 0) > 0;
+                        // Don't show button if all items are fully dispatched
+                        // For admin: only show if there's a pending request
+                        // For dispatch: show if conditions are met (they can request)
+                        if ($authUser->mode === 'admin') {
+                            $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus) && $hasPendingQtyUpdateRequest;
+                        } else {
+                            $canShowButton = $hasDispatchedQty && $hasDispatchedItems && !$isFullyDispatched && ($isValidStatus || $wasValidStatus);
+                        }
+                    @endphp
+                    @if ($canShowButton)
+                        @if ($authUser->mode === 'admin')
+                            <div class="flex items-center gap-2">
+                                <button wire:click="$set('showUpdateQtyModal', true)"
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                                    <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4h16M4 4v16M4 4l16 16M20 4v16M20 4L4 20" />
+                                    </svg>
+                                    Update Qty to Dispatched
+                                </button>
+                                @if ($hasPendingQtyUpdateRequest)
+                                    <button wire:click="cancelQtyUpdateRequest"
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-gray-500 shadow-theme-xs hover:bg-gray-600">
+                                        <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Cancel Request
+                                    </button>
+                                @endif
+                            </div>
+                        @elseif ($authUser->mode === 'dispatch')
+                            @if ($hasPendingQtyUpdateRequest)
+                                <div class="flex items-center gap-2">
+                                    <button disabled
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-400 rounded-lg bg-gray-200 shadow-theme-xs cursor-not-allowed">
+                                        <svg class="w-4 h-4" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        Request Pending
+                                    </button>
+                                    <button wire:click="cancelQtyUpdateRequest"
+                                        class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-gray-500 shadow-theme-xs hover:bg-gray-600">
+                                        <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Cancel Request
+                                    </button>
+                                </div>
+                            @else
+                                <button wire:click="$set('showRequestQtyModal', true)"
+                                    class="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                                    <svg class="w-4 h-4 text-white" aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                        viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Request Admin to Complete Dispatch
+                                </button>
+                            @endif
+                        @endif
+                    @endif
+                </div>
                 <table class="min-w-full">
                     <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
                         <tr class="bg-gray-200">
@@ -642,7 +757,12 @@
                             </th>
                             <th class="py-2 font-normal whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Quantity</p>
+                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Dispatched Qty</p>
+                                </div>
+                            </th>
+                            <th class="py-2 font-normal whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Total Qty</p>
                                 </div>
                             </th>
 
@@ -667,9 +787,23 @@
                             </td>
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        {{ $dispatchedItem->quantity }}
-                                    </p>
+                                    <input type="number" 
+                                        value="{{ $dispatchedItem->quantity }}"
+                                        disabled
+                                        class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400 bg-gray-100 cursor-not-allowed"
+                                        title="Dispatched Quantity (read-only)">
+                                </div>
+                            </td>
+                            <td class="py-1 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <input type="number" 
+                                        value="{{ $dispatchedItem->jobOrderItem->quantity }}"
+                                        wire:blur="updateJobOrderItemQuantity({{ $dispatchedItem->jobOrderItem->id }}, $event.target.value)"
+                                        min="0"
+                                        step="1"
+                                        class="w-16 border p-1 text-center text-theme-xs text-gray-700 dark:text-gray-400"
+                                        title="Total Job Order Quantity (editable)"
+                                        @if ($hasPendingQtyUpdateRequest) disabled @endif>
                                 </div>
                             </td>
 
@@ -685,10 +819,8 @@
 
 
 
+            @if ($jobOrderId && !$isFullyDispatched)
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-5">
-                @if ($jobOrderId)
-                <div class="text-sm text-gray-500 dark:text-gray-400"><strong>Note:</strong> Please enter only the additional quantity needed to reach your target total. For example, if you want the total to be 10 and you currently have 7, enter 3. If you want the total to be 5 and you currently have 7, enter <span class="text-error-500">-2</span>.</div>
-                @endif
                 <table class="min-w-full">
                     <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
                         <tr class="bg-gray-200">
@@ -735,10 +867,10 @@
                             <td class="py-1 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        <input type="number" wire:model.lazy="jobOrderItems.{{ $index }}.quantity"
-                                            wire:blur="updateTotal({{ $index }})"
+                                        <input type="number" wire:model.defer="jobOrderItems.{{ $index }}.quantity"
                                             min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}"
-                                            class="w-16 border p-1 text-center">
+                                            @if ($hasPendingQtyUpdateRequest) disabled @endif
+                                            class="w-16 border p-1 text-center @if ($hasPendingQtyUpdateRequest) bg-gray-100 cursor-not-allowed @endif">
                                     </p>
                                 </div>
                             </td>
@@ -776,6 +908,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
             @else
             <div class="custom-scrollbar max-w-full sm:p-6 overflow-x-auto mt-5">
                 <table class="min-w-full ">
@@ -834,4 +967,103 @@
 
         </div>
     </div>
+
+    {{-- Update Qty to Dispatched Modal --}}
+    @if ($showUpdateQtyModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showUpdateQtyModal', false)"></div>
+        <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+            <div @click.outside="$wire.set('showUpdateQtyModal', false)"
+                class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+                <div class="text-center">
+                    <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                        Confirm Update Quantity
+                    </h4>
+                    <div class="text-center">
+                        <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                            Are you sure you want to update the job order quantity to match the dispatched quantity? This will remove any remaining balance from the job order.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-center w-full gap-3 mt-8">
+                        <button wire:click="$set('showUpdateQtyModal', false)" type="button"
+                            class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                            Cancel
+                        </button>
+                        <button wire:click="updateJobOrderQuantityToDispatched({{ $jobOrderId }})" type="button"
+                            class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-warning-500 shadow-theme-xs hover:bg-warning-600">
+                            Update Qty
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Request Qty Update Modal (for dispatch users) --}}
+    @if ($showRequestQtyModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]" wire:click="$set('showRequestQtyModal', false)"></div>
+        <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+            <div @click.outside="$wire.set('showRequestQtyModal', false)"
+                class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+                <div class="text-center">
+                    <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                        Request Complete Dispatch
+                    </h4>
+                    <div class="text-center">
+                        <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                            Are you sure you want to request admin to complete the dispatch with current dispatched quantity?
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-center w-full gap-3 mt-8">
+                        <button wire:click="$set('showRequestQtyModal', false)" type="button"
+                            class="flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+                            Cancel
+                        </button>
+                        <button wire:click="requestQtyUpdateToAdmin({{ $jobOrderId }})" type="button"
+                            class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                            Send Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Request Success Modal --}}
+    @if ($showRequestSuccessModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-5 overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-close-btn fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[30px]"></div>
+        <div class="flex flex-col px-4 py-4 overflow-y-auto no-scrollbar">
+            <div class="relative w-full max-w-[507px] rounded-3xl bg-white p-6 dark:bg-gray-900 lg:p-10">
+                <div class="text-center">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                        Request Sent Successfully
+                    </h4>
+                    <div class="text-center">
+                        <p class="max-w-[400px] text-sm leading-6 text-gray-500 dark:text-gray-400 break-words">
+                            Your request to complete the dispatch has been sent to the admin for approval.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-center w-full gap-3 mt-8">
+                        <button wire:click="redirectToJobOrderList" type="button"
+                            class="flex justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
