@@ -6,6 +6,7 @@ use App\Models\ExpensesItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\JobOrder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class InvoicePrintPreview extends Component
@@ -105,7 +106,14 @@ class InvoicePrintPreview extends Component
         // }
 
         $invoice->increment('print_count');
-        $invoice->update(['status' => 'invoiced']);
+        // Update created_at when status changes to invoiced
+        DB::table('invoices')
+            ->where('id', $invoice->id)
+            ->update([
+                'status' => 'invoiced',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
         $this->mount($this->invoice->id);
 
         JobOrder::where('id', $invoice->order->id)->update(['status' => 'invoiced']);

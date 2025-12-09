@@ -311,12 +311,16 @@ class InvoiceView extends Component
                      $allExpensesItems = ExpensesItem::where('invoice_id', $invoice->id)->get();
                      $totalAmount = $allInvoiceItems->sum('total_price') + $allExpensesItems->sum('total_price') + ($invoice->backed_plates_price * $invoice->order->backing_qty);
 
-                    $invoice->update([
-                        'status' => 'invoiced',
-                        'total_amount' => $totalAmount,
-                        'amount_due' => $totalAmount,
-                        'created_at' => now()
-                    ]);
+                    // Update invoice with new created_at date when generating invoice
+                    DB::table('invoices')
+                        ->where('id', $invoice->id)
+                        ->update([
+                            'status' => 'invoiced',
+                            'total_amount' => $totalAmount,
+                            'amount_due' => $totalAmount,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
 
                     $jobOrder->status = 'invoiced';
                     $jobOrder->save();
