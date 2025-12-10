@@ -818,9 +818,7 @@
 
             {{-- Item List Section - Always Visible --}}
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-5">
-                @if ($jobOrderId)
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2"><strong>Note:</strong> Please enter only the additional quantity needed to reach your target total. For example, if you want the total to be 10 and you currently have 7, enter 3. If you want the total to be 5 and you currently have 7, enter <span class="text-error-500">-2</span>.</div>
-                @endif
+                
                 <table class="min-w-full">
                     <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
                         <tr class="bg-gray-200">
