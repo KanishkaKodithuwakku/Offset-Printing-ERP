@@ -630,8 +630,6 @@
             </div>
             @endif
 
-
-            @if (!empty($jobOrderItems))
             @if (session()->has('error'))
             <div
                 class="rounded-xl border border-error-500 bg-error-50 p-4 dark:border-error-500/30 dark:bg-error-500/15 mb-2">
@@ -655,7 +653,6 @@
                 </div>
             </div>
             @endif
-
 
             @if ($jobOrderId && $dispatchedCount > 0)
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-3">
@@ -819,8 +816,11 @@
 
 
 
-            @if ($jobOrderId && !$isFullyDispatched)
+            {{-- Item List Section - Always Visible --}}
             <div class="custom-scrollbar sm:p-6 max-w-full overflow-x-auto mt-5">
+                @if ($jobOrderId)
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2"><strong>Note:</strong> Please enter only the additional quantity needed to reach your target total. For example, if you want the total to be 10 and you currently have 7, enter 3. If you want the total to be 5 and you currently have 7, enter <span class="text-error-500">-2</span>.</div>
+                @endif
                 <table class="min-w-full">
                     <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
                         <tr class="bg-gray-200">
@@ -847,105 +847,74 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-
-                        @foreach ($jobOrderItems as $index => $orderItem)
-                        <tr class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
-                            <td class="py-1 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
-                                        {{ $orderItem['name'] }}
-                                    </p>
-                                </div>
-                            </td>
-                            <td class="py-1 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
-                                        {{ $orderItem['code'] }}
-                                    </p>
-                                </div>
-                            </td>
-                            <td class="py-1 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-700 dark:text-gray-400">
-                                        <input type="number" wire:model.defer="jobOrderItems.{{ $index }}.quantity"
-                                            min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}"
-                                            @if ($hasPendingQtyUpdateRequest) disabled @endif
-                                            class="w-16 border p-1 text-center @if ($hasPendingQtyUpdateRequest) bg-gray-100 cursor-not-allowed @endif">
-                                    </p>
-                                </div>
-                            </td>
-                            <td class="py-1 whitespace-nowrap text-center">
-                                <div class="flex items-center justify-center">
-                                    <p
-                                        class="text-theme-xs text-gray-300 dark:text-gray-400 text-center hover:text-gray-500">
-                                        @if ($status != 'completed')
-                                        <button wire:click="removeItem({{ $index }},{{ $orderItem['id'] }})"
-                                            class="text-red-500">
-                                            <svg class="w-4 h-4 text-gray-800 dark:text-white hover:text-gray-400"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18"
-                                                height="18" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                    stroke-linejoin="round" stroke-width="2"
-                                                    d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                            </svg>
-                                        </button>
-                                        @else
-                                        <button class="text-red-500">
-                                            <svg class="w-4 h-4 text-gray-300 dark:text-white hover:text-gray-400"
-                                                aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18"
-                                                height="18" fill="none" viewBox="0 0 24 24">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                    stroke-linejoin="round" stroke-width="2"
-                                                    d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                            </svg>
-                                        </button>
-                                        @endif
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
+                        @if (!empty($jobOrderItems) && (!$jobOrderId || !$isFullyDispatched))
+                            @foreach ($jobOrderItems as $index => $orderItem)
+                            <tr class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <td class="py-1 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                            {{ $orderItem['name'] }}
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="py-1 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <p class="text-theme-xs text-gray-700 dark:text-gray-400 px-2">
+                                            {{ $orderItem['code'] }}
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="py-1 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <p class="text-theme-xs text-gray-700 dark:text-gray-400">
+                                            <input type="number" wire:model.defer="jobOrderItems.{{ $index }}.quantity"
+                                                min="{{ isset($dispatchedCount) ? $dispatchedCount : 1 }}"
+                                                @if ($hasPendingQtyUpdateRequest) disabled @endif
+                                                class="w-16 border p-1 text-center @if ($hasPendingQtyUpdateRequest) bg-gray-100 cursor-not-allowed @endif">
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="py-1 whitespace-nowrap text-center">
+                                    <div class="flex items-center justify-center">
+                                        <p
+                                            class="text-theme-xs text-gray-300 dark:text-gray-400 text-center hover:text-gray-500">
+                                            @if ($status != 'completed')
+                                            <button wire:click="removeItem({{ $index }},{{ $orderItem['id'] }})"
+                                                class="text-red-500">
+                                                <svg class="w-4 h-4 text-gray-800 dark:text-white hover:text-gray-400"
+                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18"
+                                                    height="18" fill="none" viewBox="0 0 24 24">
+                                                    <path stroke="currentColor" stroke-linecap="round"
+                                                        stroke-linejoin="round" stroke-width="2"
+                                                        d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                </svg>
+                                            </button>
+                                            @else
+                                            <button class="text-red-500">
+                                                <svg class="w-4 h-4 text-gray-300 dark:text-white hover:text-gray-400"
+                                                    aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18"
+                                                    height="18" fill="none" viewBox="0 0 24 24">
+                                                    <path stroke="currentColor" stroke-linecap="round"
+                                                        stroke-linejoin="round" stroke-width="2"
+                                                        d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                </svg>
+                                            </button>
+                                            @endif
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        @else
+                            <tr>
+                                <td colspan="4" class="text-center text-gray-500 dark:text-gray-400 py-4">
+                                    No items found.
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
-            @endif
-            @else
-            <div class="custom-scrollbar max-w-full sm:p-6 overflow-x-auto mt-5">
-                <table class="min-w-full ">
-                    <thead class="border-y border-gray-100 py-2 dark:border-gray-800">
-                        <tr class="bg-gray-200">
-                            <th class="py-2 font-normal whitespace-nowrap px-2">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Item</p>
-                                </div>
-                            </th>
-                            <th class="py-2 font-normal whitespace-nowrap px-2">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Code</p>
-                                </div>
-                            </th>
-                            <th class="py-2 font-normal whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Quantity</p>
-                                </div>
-                            </th>
-                            <th class="py-2 font-normal whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">Remove</p>
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        <tr>
-                            <td colspan="4" class="text-center text-gray-500 dark:text-gray-400 py-4">
-                                No items found.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            @endif
 
 
             <div class="pb-6 my-6 text-right border-b border-gray-100 dark:border-gray-800 sm:p-6">
