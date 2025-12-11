@@ -876,15 +876,39 @@ class JobOrderView extends Component
 
             // Process the order items and insert them into the invoice_items table
             foreach ($jobOrder->orderItems as $orderItem) {
+                // Calculate total_price correctly (quantity * unit_price)
+                $unitPrice = (float) ($orderItem->price ?? 0);
+                $quantity = (int) ($orderItem->quantity ?? 1);
+                $totalPrice = $unitPrice * $quantity;
+                
                 $invoiceItem = InvoiceItem::create([
                     'invoice_id' => $invoice->id,
                     'item_id' => $orderItem->item_id,
-                    'quantity' => $orderItem->quantity,
-                    'unit_price' => $orderItem->price,
-                    'total_price' => $orderItem->total,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
                 ]);
                 Log::info('InvoiceItem created:', $invoiceItem->toArray());
             }
+
+            // Recalculate invoice total_amount from actual invoice items (including backed plates if applicable)
+            $allInvoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+            $calculatedTotalAmount = $allInvoiceItems->sum('total_price');
+            
+            // Add backed plates price if applicable
+            if ($jobOrder->plate_backing && $jobOrder->backing_qty > 0) {
+                $backedPlatesPrice = (float) ($jobOrder->backed_plates_price ?? 0);
+                $calculatedTotalAmount += $backedPlatesPrice * (float) $jobOrder->backing_qty;
+                
+                // Update backed_plates_price on invoice
+                $invoice->backed_plates_price = $backedPlatesPrice;
+            }
+            
+            // Update invoice with correct total_amount
+            $invoice->update([
+                'total_amount' => $calculatedTotalAmount,
+                'amount_due' => $calculatedTotalAmount,
+            ]);
 
             // Update the CustomerOrder status to 'invoicing'
             $jobOrder->status = 'invoicing';

@@ -76,25 +76,35 @@ class InvoiceView extends Component
 
         // Add regular invoice items
         foreach ($invoiceItems as $invoiceItem) {
+            $unitPrice = (float) ($invoiceItem->unit_price ?? 0);
+            $quantity = (int) ($invoiceItem->quantity ?? 1);
+            // Recalculate total_price to ensure it's correct (quantity * unit_price)
+            $totalPrice = $unitPrice * $quantity;
+            
             $this->invoiceItems[] = [
                 'id' => $invoiceItem->id,
                 'item_id' => $invoiceItem->item_id,
                 'name' => $invoiceItem->item->item_name,
-                'unit_price' => (float) ($invoiceItem->unit_price ?? 0),
-                'quantity' => (int) ($invoiceItem->quantity ?? 1),
-                'total_price' => (float) ($invoiceItem->total_price ?? 0)
+                'unit_price' => $unitPrice,
+                'quantity' => $quantity,
+                'total_price' => $totalPrice
             ];
         }
 
         // Add expenses items
         foreach ($expensesItems as $expenseItem) {
+            $unitPrice = (float) ($expenseItem->expense_price ?? 0);
+            $quantity = (int) ($expenseItem->quantity ?? 1);
+            // Recalculate total_price to ensure it's correct (quantity * unit_price)
+            $totalPrice = $unitPrice * $quantity;
+            
             $this->invoiceItems[] = [
                 'id' => $expenseItem->id,
                 'expense_id' => $expenseItem->expense_id,
                 'name' => $expenseItem->expense->expense_name,
-                'unit_price' => (float) ($expenseItem->expense_price ?? 0),
-                'quantity' => (int) ($expenseItem->quantity ?? 1),
-                'total_price' => (float) ($expenseItem->total_price ?? 0),
+                'unit_price' => $unitPrice,
+                'quantity' => $quantity,
+                'total_price' => $totalPrice,
                 'is_other_expense' => true
             ];
         }
@@ -104,6 +114,66 @@ class InvoiceView extends Component
 
         $this->originalBackedPrice = $this->backedPrice;
         $this->calculateTotal();
+        
+        // If invoice is in "invoicing" status, update database with corrected totals
+        if ($this->status === 'invoicing') {
+            DB::beginTransaction();
+            try {
+                // Update invoice items' total_price in database if they're incorrect
+                foreach ($invoiceItems as $invoiceItem) {
+                    $unitPrice = (float) ($invoiceItem->unit_price ?? 0);
+                    $quantity = (int) ($invoiceItem->quantity ?? 1);
+                    $correctTotalPrice = $unitPrice * $quantity;
+                    
+                    // Update if the stored total_price is incorrect
+                    if (abs((float)$invoiceItem->total_price - $correctTotalPrice) > 0.01) {
+                        InvoiceItem::where('id', $invoiceItem->id)->update([
+                            'total_price' => $correctTotalPrice
+                        ]);
+                    }
+                }
+                
+                // Update expenses items' total_price in database if they're incorrect
+                foreach ($expensesItems as $expenseItem) {
+                    $unitPrice = (float) ($expenseItem->expense_price ?? 0);
+                    $quantity = (int) ($expenseItem->quantity ?? 1);
+                    $correctTotalPrice = $unitPrice * $quantity;
+                    
+                    // Update if the stored total_price is incorrect
+                    if (abs((float)$expenseItem->total_price - $correctTotalPrice) > 0.01) {
+                        ExpensesItem::where('id', $expenseItem->id)->update([
+                            'total_price' => $correctTotalPrice
+                        ]);
+                    }
+                }
+                
+                // Update invoice total_amount if it's incorrect
+                $storedTotal = (float)$this->invoice->total_amount;
+                $calculatedTotal = (float)$this->total_amount;
+                
+                if (abs($storedTotal - $calculatedTotal) > 0.01) {
+                    // Use DB::table to ensure direct database update
+                    DB::table('invoices')
+                        ->where('id', $this->invoice->id)
+                        ->update([
+                            'total_amount' => $calculatedTotal,
+                            'amount_due' => $calculatedTotal,
+                            'updated_at' => now()
+                        ]);
+                    // Refresh the invoice model to get updated values
+                    $this->invoice->refresh();
+                    // Also update the component property
+                    $this->total_amount = $calculatedTotal;
+                }
+                
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                // Log error but don't break the page load
+                \Log::error('Error updating invoice totals on mount: ' . $e->getMessage());
+            }
+        }
+        
         $this->changesMade = false;
 
         // Load available other expenses

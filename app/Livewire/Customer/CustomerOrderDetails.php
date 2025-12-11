@@ -117,14 +117,29 @@ class CustomerOrderDetails extends Component
 
         // Process the order items and insert them into the invoice_items table
         foreach ($customerOrder->orderItems as $orderItem) {
+            // Calculate total_price correctly (quantity * unit_price)
+            $unitPrice = (float) ($orderItem->price ?? 0);
+            $quantity = (int) ($orderItem->quantity ?? 1);
+            $totalPrice = $unitPrice * $quantity;
+            
             InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'item_id' => $orderItem->item_id,  // Item associated with the order
-                'quantity' => $orderItem->quantity,
-                'unit_price' => $orderItem->price,  // Price of each unit
-                'total_price' => $orderItem->total, // Total price for this item (quantity * unit price)
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,  // Price of each unit
+                'total_price' => $totalPrice, // Total price for this item (quantity * unit price)
             ]);
         }
+
+        // Recalculate invoice total_amount from actual invoice items
+        $allInvoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+        $calculatedTotalAmount = $allInvoiceItems->sum('total_price');
+        
+        // Update invoice with correct total_amount
+        $invoice->update([
+            'total_amount' => $calculatedTotalAmount,
+            'amount_due' => $calculatedTotalAmount,
+        ]);
 
         // Update the CustomerOrder status to 'invoiced'
         $customerOrder->status = 'invoiced';

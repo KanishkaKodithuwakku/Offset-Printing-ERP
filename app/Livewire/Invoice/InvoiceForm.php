@@ -6,6 +6,7 @@ use App\Helpers\NumberGenerator;
 use App\Models\Customer;
 use App\Models\CustomerOrder;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\JobOrder;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Log;
@@ -242,14 +243,29 @@ class InvoiceForm extends Component
 
         if ($order) {
             foreach ($order->orderItems as $item) {
+                // Calculate total_price correctly (quantity * unit_price)
+                $unitPrice = (float) ($item->price ?? 0);
+                $quantity = (int) ($item->quantity ?? 1);
+                $totalPrice = $unitPrice * $quantity;
+                
                 $invoice->invoiceItems()->create([
                     'item_id' => $item->item_id,
                     'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->price,
-                    'total_price' => $item->total,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
                 ]);
             }
+            
+            // Recalculate invoice total_amount from actual invoice items
+            $allInvoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+            $calculatedTotalAmount = $allInvoiceItems->sum('total_price');
+            
+            // Update invoice with correct total_amount
+            $invoice->update([
+                'total_amount' => $calculatedTotalAmount,
+                'amount_due' => $calculatedTotalAmount,
+            ]);
         }
 
         session()->flash('success', 'Invoice has been created successfully!');
