@@ -53,9 +53,15 @@
         </div>
 
         <div class="flex justify-end">
+            @if (!$paginationEnabled)
             <button onclick="printPreview()" class="px-4 py-1 text-white rounded-lg bg-brand-500">
                 Print Preview
             </button>
+            @else
+            <button disabled class="px-4 py-1 text-white rounded-lg bg-gray-400 cursor-not-allowed" title="Print is disabled when pagination is enabled">
+                Print Preview
+            </button>
+            @endif
         </div>
     </div>
 
@@ -97,18 +103,20 @@
                 </tr>
                 @endforelse
             </tbody>
+            @if (!$paginationEnabled || ($paginationEnabled && $invoices->currentPage() == $invoices->lastPage()))
             <tfoot>
                 <tr class="bg-gray-100" style="border: 2px solid #000">
                     <td colspan="3" class="px-3 py-2 text-sm font-semibold text-left text-gray-500" style="font-weight: bold">Total Amount:
                     </td>
                     <td class="px-2 py-2 text-sm font-semibold text-right text-gray-500" style="font-weight: bold">
-                        {{ number_format($invoices->sum('total_amount'), 2) }}</td>
+                        {{ number_format($allInvoices->sum('total_amount'), 2) }}</td>
                     <td class="px-2 py-2 text-sm font-semibold text-right text-error-500" style="font-weight: bold">
-                        {{ number_format($invoices->sum('total_amount') - $invoices->sum('amount_due'), decimals: 2) }}</td>
+                        {{ number_format($allInvoices->sum('total_amount') - $allInvoices->sum('amount_due'), decimals: 2) }}</td>
                     <td class="px-2 py-2 text-sm font-semibold text-right text-gray-500" style="font-weight: bold">
-                        {{ number_format($invoices->sum('amount_due'), 2) }}</td>
+                        {{ number_format($allInvoices->sum('amount_due'), 2) }}</td>
                 </tr>
             </tfoot>
+            @endif
         </table>
     </div>
 
