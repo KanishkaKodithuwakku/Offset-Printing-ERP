@@ -149,7 +149,7 @@
                 </svg>
                 Back
             </button>
-            <button id="print-button" onclick="window.print()" wire:click="$refresh"
+            <button id="print-button" onclick="printPreview()" wire:click="$refresh"
                 style="display: flex; align-items: right; gap: 0.5rem; font-family: 'Open Sans', sans-serif; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; border-radius: 0.375rem; background-color: #465FFF; box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1); border: none; cursor: pointer; margin-right: 2.5rem;">
                 <svg style="width: 1.5rem; height: 1.5rem; color: white;" aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -160,3 +160,125 @@
             </button>
         </div>
     </div>
+
+<script>
+    function printPreview() {
+        // Get the printable area element
+        const printableElement = document.getElementById('printable-area');
+        if (!printableElement) {
+            alert('Print area not found');
+            return;
+        }
+        
+        // Clone the element to avoid modifying the original
+        const clone = printableElement.cloneNode(true);
+        
+        // Remove the style tag from clone
+        const styleTag = clone.querySelector('style');
+        if (styleTag) styleTag.remove();
+        
+        // Remove buttons and their parent container from the clone
+        const printButton = clone.querySelector('#print-button');
+        const backButton = clone.querySelector('#back-button');
+        const buttonContainer = clone.querySelector('div[style*="margin-top: 1.5rem"][style*="display: flex"]');
+        
+        if (printButton) printButton.remove();
+        if (backButton) backButton.remove();
+        // Remove the button container div entirely
+        if (buttonContainer) {
+            buttonContainer.remove();
+        }
+        
+        // Get the inner div that contains the actual content
+        const innerDiv = clone.querySelector('div[style*="max-width"]');
+        let content = '';
+        if (innerDiv) {
+            content = innerDiv.outerHTML;
+        } else {
+            // Fallback: get all content except style and buttons
+            content = clone.innerHTML;
+        }
+
+        const win = window.open('', '_blank', 'width=800,height=600');
+        
+        if (!win) {
+            alert('Please allow popups for this site');
+            return;
+        }
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Payment Receipt - Print Preview</title>
+                <meta charset="UTF-8">
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 10mm;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: 'Open Sans', sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: white;
+                    }
+                    #printable-area {
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Open Sans', sans-serif;
+                    }
+                    #printable-area > div {
+                        max-width: 100%;
+                        margin: 0 auto;
+                        padding: 1.5rem;
+                        font-family: 'Open Sans', sans-serif;
+                        background-color: white;
+                    }
+                    .no-print,
+                    #print-button,
+                    #back-button {
+                        display: none !important;
+                    }
+                    table {
+                        width: 100%;
+                        font-size: 0.875rem;
+                        border: 1px solid black;
+                        border-collapse: collapse;
+                        margin-bottom: 1rem;
+                    }
+                    th, td {
+                        border: 1px solid black;
+                        padding: 0.5rem;
+                    }
+                    thead {
+                        background-color: #f7f8f8;
+                    }
+                    h2 {
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                    p {
+                        margin: 0.5rem 0;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="printable-area" style="width: 100%; margin: 0; padding: 0; font-family: 'Open Sans', sans-serif;">
+                    ${content}
+                </div>
+            </body>
+            </html>
+        `);
+
+        // Delay printing to ensure content is loaded
+        win.document.close();
+        win.focus();
+        win.print();
+    }
+</script>
