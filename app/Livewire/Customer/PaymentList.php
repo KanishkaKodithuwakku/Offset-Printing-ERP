@@ -206,6 +206,7 @@ class PaymentList extends Component
 
     public function render()
     {
+        // Default query excludes soft-deleted rows so cancelled receipts stay hidden
         $query = Payment::query()
             ->withSum('paymentDetails', 'amount')
             ->withSum([
@@ -217,7 +218,8 @@ class PaymentList extends Component
         // Status/method filter
         if (!empty($this->statusFilter)) {
             if ($this->statusFilter === 'cancelled') {
-                $query->where('status', 'cancelled');
+                // Explicitly avoid showing cancelled receipts
+                $query->whereRaw('1 = 0');
             } else {
                 $query->where('method', $this->statusFilter);
                 $query->where('status', '!=', 'cancelled');

@@ -7,14 +7,26 @@
     {{-- Filters --}}
     <div class="flex flex-wrap items-end gap-4">
         <div class="relative">
-            <label class="block text-xs font-medium text-gray-700">Select Customer</label>
-            <select wire:model="customerId" wire:change="loadCustomerInvoices"
-                class="block w-full h-8 py-2 pl-3 pr-10 text-xs border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none focus:ring-blue-500">
-                <option value="">All Customers</option>
-                @foreach ($customers as $customer)
-                <option value="{{ $customer['id'] }}">{{ $customer['name'] }}</option>
-                @endforeach
-            </select>
+            <label class="block text-xs font-medium text-gray-700">Customer</label>
+            <input
+                type="text"
+                name="customerName"
+                wire:model.live.debounce.300ms="customerName"
+                placeholder="Search customer by name..."
+                class="block w-full h-8 py-2 pl-3 pr-3 text-xs border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+            >
+            @if ($showSuggestions && !empty($customerName) && $customerSuggestions->count())
+                <div class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-auto">
+                    @foreach ($customerSuggestions as $customer)
+                        <button
+                            type="button"
+                            wire:click="selectCustomer('{{ addslashes($customer->name) }}')"
+                            class="w-full px-3 py-2 text-left text-xs hover:bg-gray-100">
+                            {{ $customer->name }}
+                        </button>
+                    @endforeach
+                </div>
+            @endif
         </div>
 
         <div>
@@ -149,8 +161,8 @@
         const endDate = endDateInput ? formatDate(endDateInput.value) : '';
 
         const statusFilter = document.querySelector('select[wire\\:model\\.change="statusFilter"]')?.value || 'ALL';
-        const customerSelect = document.querySelector('select[wire\\:model="customerId"]');
-        const customerName = customerSelect?.options[customerSelect.selectedIndex]?.text || 'All Customers';
+        const customerInput = document.querySelector('input[name="customerName"]');
+        const customerName = customerInput?.value?.trim() || 'All Customers';
 
         const printDate = new Date().toLocaleDateString('en-US', {
             year: 'numeric',

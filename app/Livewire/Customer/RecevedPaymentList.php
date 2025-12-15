@@ -18,8 +18,9 @@ class RecevedPaymentList extends Component
     public $startDate;
     public $endDate;
     public $customers;
-    public $customerId = '';
+    public $customerName = '';
     public $paginationEnabled = true;
+    public $showSuggestions = false;
 
     public function applyFilters()
     {
@@ -51,21 +52,21 @@ class RecevedPaymentList extends Component
         $this->resetPage();
     }
 
-    public function updatingCustomerId()
+    public function updatingCustomerName()
     {
+        $this->showSuggestions = true;
         $this->resetPage();
     }
 
     public function render()
     {
-        $query = Payment::query()->with(['customer', 'bank', 'bankBranch'])->withSum('paymentDetails', 'amount');
+        $query = Payment::query()
+            ->with(['customer', 'bank', 'bankBranch'])
+            ->withSum('paymentDetails', 'amount')
+            ->where('status', '!=', 'cancelled'); // hide cancelled payments
 
         if (!empty($this->statusFilter) && $this->statusFilter !== 'ALL') {
             $query->where('method', $this->statusFilter);
-        }
-
-        if (request('customerId')) {
-            $query->where('customer_id', request('customerId'));
         }
 
         // Search filter
@@ -90,14 +91,26 @@ class RecevedPaymentList extends Component
             $query->whereDate('created_at', '<=', $end);
         }
 
-        if (!empty($this->customerId)) {
-            $query->where('customer_id', $this->customerId);
+        if (!empty($this->customerName)) {
+            $query->whereHas('customer', function ($q) {
+                $q->where('name', 'like', "%{$this->customerName}%");
+            });
         }
 
         $payments = $this->paginationEnabled
             ? $query->orderBy('created_at', 'asc')->paginate(25)
             : $query->orderBy('created_at', 'asc')->get();
         $this->customers = \App\Models\Customer::select('id', 'name')->get();
+
+        // Build a lightweight suggestion list for the customer search input
+        $customerSuggestions = collect();
+        if ($this->showSuggestions && $this->customerName) {
+            $customerSuggestions = \App\Models\Customer::select('name')
+                ->where('name', 'like', "%{$this->customerName}%")
+                ->orderBy('name')
+                ->limit(10)
+                ->get();
+        }
 
         $bodyAttributes = 'x-data="{ page: \'RecevedPaymentsPrint\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
             x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
@@ -111,7 +124,19 @@ class RecevedPaymentList extends Component
             'searchTerm' => $this->searchTerm,
             'statusFilter' => $this->statusFilter,
             'customers' => $this->customers,
-            'customerId' => $this->customerId,
+            'customerName' => $this->customerName,
+            'customerSuggestions' => $customerSuggestions,
+            'showSuggestions' => $this->showSuggestions,
         ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
+    }
+
+    /**
+     * Allow clicking a suggestion to populate the search box.
+     */
+    public function selectCustomer(string $name): void
+    {
+        $this->customerName = $name;
+        $this->resetPage();
+        $this->showSuggestions = false;
     }
 }

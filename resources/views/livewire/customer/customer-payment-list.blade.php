@@ -95,7 +95,6 @@
                             <option value="">All</option>
                             <option value="CA">Cash</option>
                             <option value="CH">Cheque</option>
-                            <option value="cancelled">Cancelled</option>
                         </select>
 
                         <button @click="open = true"
