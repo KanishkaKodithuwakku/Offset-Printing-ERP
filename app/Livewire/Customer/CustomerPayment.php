@@ -46,6 +46,7 @@ class CustomerPayment extends Component
     public $selectedCustomer;
     public $customerId;
     public $selectedPayments = [];
+    public $paymentFieldRefreshKey = 0;
 
     public $ledger_id;
     public $bank_id;
@@ -120,22 +121,64 @@ class CustomerPayment extends Component
         if (!$this->selectedCustomerId)
             return;
 
+        // Get current invoice ID (if opening modal for a specific invoice)
+        $currentInvoiceId = null;
+        if (!empty($this->selectedInvoices)) {
+            $currentInvoiceId = is_array($this->selectedInvoices[0]) 
+                ? ($this->selectedInvoices[0]['id'] ?? null)
+                : $this->selectedInvoices[0];
+        }
+
+        // Calculate credits already allocated to OTHER invoices (excluding current invoice) in current session
+        $totalAllocatedInSession = 0;
+        foreach ($this->invoices as $invoice) {
+            $invoiceId = (int) ($invoice['id'] ?? 0);
+            $allocatedCredit = (float) ($invoice['credit'] ?? 0);
+            
+            // Skip current invoice and invoices with no credit allocated
+            if ($invoiceId === (int) $currentInvoiceId || $allocatedCredit <= 0) {
+                continue;
+            }
+            $totalAllocatedInSession += $allocatedCredit;
+        }
+
         $credits = CustomerCredit::where('customer_id', $this->selectedCustomerId)
             ->where('amount', '>', 0)
             ->orderBy('created_at', 'asc')
             ->get();
 
         $this->credits = [];
+        $remainingSessionAllocation = $totalAllocatedInSession;
 
         foreach ($credits as $credit) {
-            $amountToUse = min($credit->amount, $requiredBalance);
+            // Get how much of this credit has been used (from database - credit_applications)
+            $usedFromDB = \App\Models\CreditApplication::where('customer_credit_id', $credit->id)
+                ->sum('amount_applied');
+            
+            // Calculate remaining credit after database usage
+            $remainingCredit = max(0, $credit->amount - $usedFromDB);
+            
+            // Reduce by session allocations to OTHER invoices (allocate from oldest credit first)
+            if ($remainingCredit > 0 && $remainingSessionAllocation > 0) {
+                $sessionDeduction = min($remainingCredit, $remainingSessionAllocation);
+                $remainingCredit = max(0, $remainingCredit - $sessionDeduction);
+                $remainingSessionAllocation = max(0, $remainingSessionAllocation - $sessionDeduction);
+            }
+            
+            if ($remainingCredit <= 0) {
+                continue; // Skip fully used credits
+            }
+            
+            // Calculate amount to use for this invoice
+            $amountToUse = min($remainingCredit, $requiredBalance);
+            
             $this->credits[] = [
                 'id' => $credit->id,
                 'date' => $credit->created_at->format('Y-m-d'),
                 'number' => $credit->credit_number ?? 'CR-' . $credit->id,
-                'amount' => $credit->amount,
+                'amount' => $remainingCredit, // Show remaining amount, not original
                 'amountToUse' => $amountToUse,
-                'balance' => $credit->amount - $amountToUse,
+                'balance' => $remainingCredit - $amountToUse,
             ];
             $requiredBalance -= $amountToUse;
 
@@ -144,27 +187,25 @@ class CustomerPayment extends Component
             }
         }
 
-        // Update UI
-        $this->availableCredits = $credits->sum('amount');
+        // Update UI with actual available credits (after session allocations)
+        $totalAvailableCredit = collect($this->credits)->sum('amount');
+        $this->availableCredits = $totalAvailableCredit;
         $this->showCreditModal = true;
     }
 
     public $customerAvlCredits = null;
+    public $totalCreditsFromDB = 0;
 
     public function loadCustomerTotalCredit()
     {
         if (!$this->selectedCustomerId) {
             $this->totalCredit = 0;
+            $this->customerAvlCredits = 0;
             return;
         }
 
-        // Sum the available credits for the selected customer
-        $this->customerAvlCredits = CustomerCredit::where('customer_id', $this->selectedCustomerId)
-            ->sum('amount');  // or sum('available_amount') if you have that column
-
-        // dd($totalCredits);
-
-        // $this->totalCredit = $totalCredits;
+        // Use recalculateAvailableCredits to get the correct balance (accounting for allocations)
+        $this->recalculateAvailableCredits();
     }
 
 
@@ -209,9 +250,8 @@ class CustomerPayment extends Component
             return $invoice;
         })->toArray();
 
-        // Update payments and paymentAmount for UI binding
-        $this->payments[$invoiceId] = $totalCreditUsed;
-        //$this->paymentAmount = $totalCreditUsed;
+        // Don't set payment when allocating credit - payment and credit are separate
+        // $this->payments[$invoiceId] should remain unchanged when credit is allocated
 
         $this->showCreditModal = false;
         $this->calculateTotals();
@@ -228,7 +268,7 @@ class CustomerPayment extends Component
         $invoiceId = (int) $selectedInvoice['id'];
         $totalCreditUsed = 0;
 
-        // Sum all applied credit
+        // Sum all applied credit for the selected invoice
         foreach ($this->credits as $credit) {
             $amountToUse = (float) ($credit['amountToUse'] ?? 0);
             if ($amountToUse > 0) {
@@ -236,15 +276,30 @@ class CustomerPayment extends Component
             }
         }
 
+        // Find the invoice to get original_amount
+        $invoice = collect($this->invoices)->firstWhere('id', $invoiceId);
+        if (!$invoice) {
+            return;
+        }
+
         // Replace invoice with updated values
-        $this->invoices = collect($this->invoices)->map(function ($invoice) use ($invoiceId, $totalCreditUsed) {
-            if ((int) $invoice['id'] === $invoiceId) {
-                $invoice['credit'] = $totalCreditUsed;
-                $invoice['amount_due'] = max(0, $invoice['amount_due'] - $totalCreditUsed);
+        // Recalculate amount_due from original_amount minus credit and payment
+        $this->invoices = collect($this->invoices)->map(function ($inv) use ($invoiceId, $totalCreditUsed) {
+            if ((int) $inv['id'] === $invoiceId) {
+                $inv['credit'] = $totalCreditUsed;
+                $originalAmount = (float) ($inv['original_amount'] ?? 0);
+                $paymentApplied = (float) ($this->payments[$inv['id']] ?? 0);
+                $inv['amount_due'] = max(0, $originalAmount - $totalCreditUsed - $paymentApplied);
             }
-            return $invoice;
+            return $inv;
         })->toArray();
 
+        // Note: Removed automatic allocation to subsequent invoices
+        // Users should manually allocate credits to each invoice through the modal
+
+        // Recalculate available credits (total credits minus allocated credits)
+        $this->recalculateAvailableCredits();
+        
         $this->showCreditModal = false;
         $this->calculateTotals();
     }
@@ -316,20 +371,125 @@ class CustomerPayment extends Component
 
     }
 
-    public function openCreditModal($invoiceId): void
+    public function updateInvoiceCredit($invoiceId, $creditAmount)
     {
-        $invoice = Invoice::find($invoiceId);
-        $manualPayment = $this->payments[$invoiceId] ?? 0;
-        $requiredBalance = max(0, $invoice->amount_due - $manualPayment);
+        $creditAmount = (float) $creditAmount;
+        
+        // Find the invoice
+        $invoice = collect($this->invoices)->firstWhere('id', $invoiceId);
+        if (!$invoice) {
+            session()->flash('error', 'Invoice not found.');
+            return;
+        }
 
-        $this->selectedInvoices = [
-            [
-                'id' => $invoiceId,
-                'amount' => $manualPayment,
-            ]
-        ];
+        // Validation 1: Credit amount cannot be negative
+        if ($creditAmount < 0) {
+            session()->flash('error', 'Credit amount cannot be negative.');
+            // Reset to 0
+            $this->invoices = collect($this->invoices)->map(function ($inv) use ($invoiceId) {
+                if ((int) $inv['id'] === (int) $invoiceId) {
+                    $inv['credit'] = 0;
+                }
+                return $inv;
+            })->toArray();
+            $this->calculateTotals();
+            return;
+        }
 
-        $this->loadCustomerCredits($requiredBalance); // Pass only required balance
+        // Get invoice details
+        $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+        $paymentApplied = (float) ($this->payments[$invoiceId] ?? 0);
+        $currentAmountDue = max(0, $originalAmount - $paymentApplied);
+
+        // Validation 2: Credit cannot exceed invoice original amount
+        if ($creditAmount > $originalAmount) {
+            session()->flash('error', 'Credit amount (' . number_format($creditAmount, 2) . ') cannot exceed the invoice original amount (' . number_format($originalAmount, 2) . ').');
+            // Reset to the maximum allowed (original amount)
+            $creditAmount = $originalAmount;
+        }
+
+        // Validation 3: Credit cannot exceed invoice amount_due (after considering payments)
+        if ($creditAmount > $currentAmountDue) {
+            session()->flash('error', 'Credit amount (' . number_format($creditAmount, 2) . ') cannot exceed the invoice amount due (' . number_format($currentAmountDue, 2) . ').');
+            // Reset to the maximum allowed (current amount_due)
+            $creditAmount = $currentAmountDue;
+        }
+
+        // Get total available credits from database
+        if (!$this->selectedCustomerId) {
+            session()->flash('error', 'Please select a customer first.');
+            return;
+        }
+
+        $totalAvailableCredits = CustomerCredit::where('customer_id', $this->selectedCustomerId)
+            ->where('amount', '>', 0)
+            ->sum('amount');
+
+        // Calculate total credits already allocated to OTHER invoices (excluding current invoice)
+        $totalCreditsAllocatedToOthers = 0;
+        foreach ($this->invoices as $inv) {
+            $invId = (int) ($inv['id'] ?? 0);
+            if ($invId !== (int) $invoiceId) {
+                $totalCreditsAllocatedToOthers += (float) ($inv['credit'] ?? 0);
+            }
+        }
+
+        // Validation 4: Ensure total credits don't exceed available credit balance
+        $newTotalAllocated = $totalCreditsAllocatedToOthers + $creditAmount;
+        if ($newTotalAllocated > $totalAvailableCredits) {
+            $maxAllowedFromCreditBalance = max(0, $totalAvailableCredits - $totalCreditsAllocatedToOthers);
+            // Also ensure it doesn't exceed the invoice original amount or amount_due
+            $maxAllowedForThisInvoice = min($maxAllowedFromCreditBalance, $originalAmount, $currentAmountDue);
+            
+            session()->flash('error', 'Cannot allocate more than available credits. Maximum allowed for this invoice: ' . number_format($maxAllowedForThisInvoice, 2) . ' (Available credit: ' . number_format($maxAllowedFromCreditBalance, 2) . ', Invoice original: ' . number_format($originalAmount, 2) . ', Amount due: ' . number_format($currentAmountDue, 2) . ')');
+            
+            // Reset the credit amount to the maximum allowed
+            $creditAmount = $maxAllowedForThisInvoice;
+        }
+
+        // Update the invoice credit and recalculate amount_due
+        // IMPORTANT: When credit is entered, preserve existing payment_applied
+        $updated = false;
+        foreach ($this->invoices as $key => $inv) {
+            if ((int) $inv['id'] === (int) $invoiceId) {
+                // Get current payment_applied value (preserve it, don't reset it)
+                $currentPaymentApplied = (float) ($inv['payment_applied'] ?? 0);
+                
+                // CRITICAL: Only reset payment_applied if it equals credit (which is wrong)
+                // If payment_applied is different from credit, keep it as is
+                if ($currentPaymentApplied > 0 && abs($currentPaymentApplied - $creditAmount) < 0.01) {
+                    // Payment equals credit - this is wrong, reset to 0
+                    $currentPaymentApplied = 0;
+                    $this->invoices[$key]['payment_applied'] = 0;
+                    $this->payments[$invoiceId] = null;
+                } else {
+                    // Payment is different from credit - preserve it
+                    // Don't modify payment_applied when credit is entered
+                }
+                
+                // Recalculate amount_due: original - credit - payment
+                $newAmountDue = max(0, $originalAmount - $creditAmount - $currentPaymentApplied);
+                
+                // Only update if values actually changed
+                if ($this->invoices[$key]['credit'] != $creditAmount || $this->invoices[$key]['amount_due'] != $newAmountDue) {
+                    $this->invoices[$key]['credit'] = $creditAmount;
+                    $this->invoices[$key]['amount_due'] = $newAmountDue;
+                    $updated = true;
+                }
+                break;
+            }
+        }
+        
+        // Force Livewire to detect the array change by creating a new array reference
+        if ($updated) {
+            $this->invoices = array_values($this->invoices);
+            // Increment refresh key to force payment field re-render
+            $this->paymentFieldRefreshKey++;
+        }
+
+        // Recalculate available credits and totals
+        $this->recalculateAvailableCredits();
+        $this->calculateTotals();
     }
 
 
@@ -359,6 +519,14 @@ class CustomerPayment extends Component
         $this->payments = [];
         $this->selectAll = false;
         $this->paymentAmount = 0;
+        
+        // Sync payments array with payment_applied from invoices
+        foreach ($this->invoices as $invoice) {
+            $paymentApplied = (float) ($invoice['payment_applied'] ?? 0);
+            if ($paymentApplied > 0) {
+                $this->payments[$invoice['id']] = $paymentApplied;
+            }
+        }
 
         $this->calculateTotals();
     }
@@ -466,7 +634,9 @@ class CustomerPayment extends Component
     protected function recalculateRemaining()
     {
         // subtract the sum of all allocated payments from the original
-        $allocated = collect($this->payments)->sum();
+        $allocated = collect($this->payments)->sum(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        });
         $this->remainingBalance = max(0, $this->initialPayment - $allocated);
     }
 
@@ -497,35 +667,87 @@ class CustomerPayment extends Component
     public $overpayment = 0;
     public function updateSelectedInvoiceAmount($invoiceId)
     {
+        // Find the invoice
+        $invoice = collect($this->invoices)->firstWhere('id', $invoiceId);
+        if (!$invoice) {
+            return;
+        }
 
+        // Clean and validate payments array
+        // CRITICAL: Convert empty strings and null to null (not 0), so field stays blank
         $this->payments = array_map(function ($value) {
-            return is_numeric($value) ? floatval($value) : 0;
+            if ($value === null || $value === '' || $value === '0' || $value === 0) {
+                return null; // Keep as null so field displays empty
+            }
+            return is_numeric($value) ? floatval($value) : null;
         }, $this->payments);
 
-        $this->paymentAmount = array_sum(array_map('floatval', $this->payments));
-        $amount = floatval($this->payments[$invoiceId] ?? 0);
-        $this->totalPayment = collect($this->payments)->sum();
+        // Get the payment amount for this invoice - preserve what user entered
+        // CRITICAL: Always read from $this->payments array, never from $invoice['credit']
+        $rawAmount = $this->payments[$invoiceId] ?? null;
+        $amount = ($rawAmount !== null && $rawAmount !== '') ? floatval($rawAmount) : 0;
+        
+        // CRITICAL: If payment equals credit, it's wrong - reset to 0 (empty)
+        $invoiceCredit = (float) ($invoice['credit'] ?? 0);
+        if ($amount > 0 && $invoiceCredit > 0 && abs($amount - $invoiceCredit) < 0.01) {
+            // Payment matches credit - this is wrong, reset to empty
+            $amount = 0;
+            $this->payments[$invoiceId] = null;
+        }
+        
+        // Get invoice details
+        $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+        $creditApplied = (float) ($invoice['credit'] ?? 0);
+        
+        // Calculate amount due before payment: original - credit
+        $amountDueBeforePayment = max(0, $originalAmount - $creditApplied);
+        
+        // Max payment is the original amount (allows paying full invoice even after credit)
+        $maxPayment = $originalAmount;
+
+        // Validation: Payment cannot exceed original amount
+        if ($amount > $maxPayment && $maxPayment > 0) {
+            session()->flash('error', 'Payment amount (' . number_format($amount, 2) . ') cannot exceed the invoice original amount (' . number_format($maxPayment, 2) . ').');
+            // Reset to maximum allowed
+            $amount = $maxPayment;
+            $this->payments[$invoiceId] = $amount;
+        }
+        
+        // Ensure payment is not negative
+        if ($amount < 0) {
+            $amount = 0;
+            $this->payments[$invoiceId] = 0;
+        }
+
+        // Calculate totals - treat null/empty as 0 for calculations
+        $this->paymentAmount = array_sum(array_map(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        }, $this->payments));
+        $this->totalPayment = collect($this->payments)->sum(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        });
         $this->overpayment = 0;  // Reset the overpayment each time to calculate fresh
 
-        // Update overpayment logic
-        foreach ($this->invoices as &$invoice) {
-            if ($invoice['id'] == $invoiceId) {
-                $invoice['payment_applied'] = $amount;
-
-                // Explicit casting
-                $amountDue = floatval($invoice['amount_due']);
-                $invoice['amount_due'] = max(0, $invoice['original_amount'] - $invoice['payment_applied']);
+        // Update invoice with validated payment
+        $this->invoices = collect($this->invoices)->map(function ($inv) use ($invoiceId, $amount, $originalAmount) {
+            if ((int) $inv['id'] === (int) $invoiceId) {
+                // Update payment_applied in invoice array (this is what displays in the payment column)
+                $inv['payment_applied'] = $amount;
+                $creditApplied = (float) ($inv['credit'] ?? 0);
+                $inv['amount_due'] = max(0, $originalAmount - $creditApplied - $amount);
             }
+            return $inv;
+        })->toArray();
+        
+        // Also sync payments array with payment_applied for consistency
+        // This ensures wire:model displays the correct value
+        $this->payments[$invoiceId] = ($amount > 0) ? $amount : null;
+        
+        // Force Livewire to detect the change
+        $this->payments = array_merge([], $this->payments);
 
-            // Check for overpayment condition
-            if (isset($invoice['payment_applied']) && is_numeric($invoice['payment_applied']) && $invoice['payment_applied'] > $invoice['original_amount']) {
-                // Collect overpayments
-                $this->overpayment += $invoice['payment_applied'] - $invoice['original_amount'];
-            }
-        }
         $this->recalculateRemaining();
-        // Debug overpayment collection
-        logger("Total Overpayment: " . $this->overpayment);
+        $this->calculateTotals();
     }
 
 
@@ -533,9 +755,13 @@ class CustomerPayment extends Component
 
     public function __updateSelectedInvoiceAmount($invoiceId)
     {
-        $this->paymentAmount = array_sum($this->payments);
+        $this->paymentAmount = array_sum(array_map(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        }, $this->payments));
         $amount = floatval($this->payments[$invoiceId] ?? 0);
-        $this->totalPayment = collect($this->payments)->sum();
+        $this->totalPayment = collect($this->payments)->sum(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        });
 
         foreach ($this->invoices as &$invoice) {
             if ($invoice['id'] == $invoiceId) {
@@ -587,10 +813,35 @@ class CustomerPayment extends Component
             }
         }
 
+        // Recalculate available credits after totals are calculated
+        $this->recalculateAvailableCredits();
+
         $this->discountAndCreditsApplied = max(0, $this->selectedTotalAmountDue - $this->totalPayment);
         $this->difference = $this->paymentAmount - $this->totalPayment;
 
         // dd($this->difference);
+    }
+
+    public function recalculateAvailableCredits()
+    {
+        if (!$this->selectedCustomerId) {
+            $this->availableCredits = 0;
+            $this->customerAvlCredits = 0;
+            return;
+        }
+
+        // Get total credits from database
+        $this->totalCreditsFromDB = CustomerCredit::where('customer_id', $this->selectedCustomerId)
+            ->where('amount', '>', 0)
+            ->sum('amount');
+
+        // Calculate total credits already allocated to invoices
+        $totalCreditsAllocated = collect($this->invoices)->sum(fn($inv) => (float)($inv['credit'] ?? 0));
+
+        // Available credits = total credits - allocated credits
+        $remainingCredits = max(0, $this->totalCreditsFromDB - $totalCreditsAllocated);
+        $this->availableCredits = $remainingCredits;
+        $this->customerAvlCredits = $remainingCredits;
     }
 
     public function generateNextEntryNumber($label)
@@ -604,7 +855,9 @@ class CustomerPayment extends Component
     public function savePayment()
     {
         // 1) Totals for what the user entered:
-        $totalCash = collect($this->payments)->sum() ?? 0;                          // new cash/check
+        $totalCash = collect($this->payments)->sum(function($val) {
+            return ($val === null || $val === '') ? 0 : floatval($val);
+        }) ?? 0;                          // new cash/check
         $totalCredit = collect($this->invoices)->sum(fn($inv) => $inv['credit'] ?? 0);
 
         // Validation for bank and branch when payment method is check
@@ -885,6 +1138,18 @@ class CustomerPayment extends Component
 
     public function render()
     {
+        // CRITICAL: Sync payments array with payment_applied from invoices before rendering
+        // This ensures wire:model displays the correct payment_applied value, not credit
+        // payment_applied is ALWAYS the source of truth for the payment field
+        foreach ($this->invoices as $invoice) {
+            $invoiceId = $invoice['id'];
+            $paymentApplied = (float) ($invoice['payment_applied'] ?? 0);
+            
+            // ALWAYS sync payment_applied to payments array (this is what wire:model uses)
+            // If payment_applied is 0, set to null (empty field)
+            // If payment_applied > 0, use that value (even if it equals credit - that's a data issue, not display issue)
+            $this->payments[$invoiceId] = ($paymentApplied > 0) ? $paymentApplied : null;
+        }
 
         $this->listeners = ['invoicesUpdated' => 'handleInvoicesUpdated'];
         $bodyAttributes = 'x-data="{ page: \'CustomerPayment\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"

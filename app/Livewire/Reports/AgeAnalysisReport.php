@@ -63,7 +63,17 @@ class AgeAnalysisReport extends Component
     $query = DB::table('invoices')
         ->join('customers', 'invoices.customer_id', '=', 'customers.id')
         ->where('invoices.amount_due', '>', 0)
-        ->where('invoices.status', 'invoiced')
+        // Exclude 'cancelled' invoices
+        ->whereNotIn('invoices.status', ['cancelled'])
+        // Exclude: status = 'invoicing' AND payment_status = 'unpaid'
+        // Include: status = 'invoicing' AND payment_status = 'partial'
+        ->where(function($q) {
+            $q->where('invoices.status', '!=', 'invoicing')
+              ->orWhere(function($q2) {
+                  $q2->where('invoices.status', 'invoicing')
+                     ->where('invoices.payment_status', 'partial');
+              });
+        })
         ->select(
             'customers.name as customer_name',
             'customers.customer_number',

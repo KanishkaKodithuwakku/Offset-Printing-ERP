@@ -350,6 +350,8 @@
     <pre>total credit {{ $totalCredit}}</pre>
     <pre>overpayment {{ $overpayment}}</pre> --}}
 
+
+
     <!-- Invoices Table -->
     <div class="overflow-x-auto mb-6">
         <table class="min-w-full divide-y divide-gray-300">
@@ -361,16 +363,23 @@
                     </th>
                     <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">DATE</th>
                     <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">NUMBER</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">ORIG. AMT.
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">ORIG. AMT.
                     </th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">AMT. DUE</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">CREDIT</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">PAYMENT</th>
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">AMT. DUE</th>
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">CREDIT</th>
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">PAYMENT</th>
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">TOTAL</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
                 @forelse($invoices as $index => $invoice)
-                <tr class="{{ $index % 2 == 0 ? 'bg-white' : 'bg-gray-50' }}">
+                @php
+                    $amountDue = (float) ($invoice['amount_due'] ?? 0);
+                    $isFullyPaid = $amountDue == 0;
+                    $baseClass = $index % 2 == 0 ? 'bg-white' : 'bg-gray-50';
+                    $highlightClass = $isFullyPaid ? 'bg-success-50 border-l-4 border-green-500' : '';
+                @endphp
+                <tr class="{{ $baseClass }} {{ $highlightClass }}">
                     <td class="whitespace-nowrap py-3 pl-4 pr-3 text-xs sm:pl-6">
                         {{-- <input type="checkbox" wire:change="toggleInvoiceSelection({{ $invoice['id'] }})"
                             class="h-4 w-4 text-blue-600" /> --}}
@@ -381,33 +390,105 @@
                     <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900">
                         {{ $invoice['invoice_number'] }}
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($invoice['original_amount'], 2) }}
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($invoice['amount_due'], 2) }}
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-brand-500  cursor-pointer underline"
-                        wire:click="openCreditModal({{ $invoice['id'] }})">
-
-                        {{ number_format($invoice['credit'] ?? 0, 2) }}
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-right">
+                        @php
+                            $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+                            $paymentApplied = (float) ($payments[$invoice['id']] ?? 0);
+                            $currentAmountDue = max(0, $originalAmount - $paymentApplied);
+                            $currentInvoiceCredit = (float) ($invoice['credit'] ?? 0);
+                            
+                            // Calculate credits allocated to OTHER invoices (excluding current invoice)
+                            $totalCreditsAllocatedToOthers = 0;
+                            foreach ($invoices as $inv) {
+                                if ((int)($inv['id'] ?? 0) !== (int)($invoice['id'] ?? 0)) {
+                                    $totalCreditsAllocatedToOthers += (float)($inv['credit'] ?? 0);
+                                }
+                            }
+                            
+                            // Calculate available balance: remaining credit available for allocation
+                            // Get total credits from database (use totalCreditsFromDB property, not customerAvlCredits which is already reduced)
+                            $dbTotalCredits = (float) ($totalCreditsFromDB ?? 0);
+                            
+                            // Calculate total credits allocated to ALL invoices (including current)
+                            $totalCreditsAllocated = 0;
+                            foreach ($invoices as $inv) {
+                                $totalCreditsAllocated += (float)($inv['credit'] ?? 0);
+                            }
+                            
+                            // Remaining balance = total from DB - all allocated credits
+                            $availableCreditBalance = max(0, $dbTotalCredits - $totalCreditsAllocated);
+                            
+                            // Max credit is the minimum of: original amount, amount due, and available credit balance
+                            $maxCredit = min($originalAmount, $currentAmountDue, $availableCreditBalance);
+                        @endphp
+                        <input type="number" 
+                            step="0.01" 
+                            min="0"
+                            max="{{ $maxCredit }}"
+                            value="{{ number_format($invoice['credit'] ?? 0, 2, '.', '') }}"
+                            wire:change="updateInvoiceCredit({{ $invoice['id'] }}, $event.target.value)"
+                            oninput="const max = {{ $maxCredit }}; const val = parseFloat(this.value) || 0; if(val > max) { this.value = max; } if(val < 0) { this.value = 0; }"
+                            onkeypress="return event.charCode >= 48 && event.charCode <= 57 || event.charCode === 46"
+                            class="text-right border rounded px-2 py-1 text-xs w-20 block ml-auto" 
+                            placeholder="{{ number_format($maxCredit, 2) }}"
+                            title="Maximum credit: {{ number_format($maxCredit, 2) }} (Original: {{ number_format($originalAmount, 2) }}, Available: {{ number_format($availableCreditBalance, 2) }})" />
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-3 text-xs font-medium text-right">
+                        @php
+                            $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+                            $creditApplied = (float) ($invoice['credit'] ?? 0);
+                            
+                            // Use payment_applied from invoice array (this is the source of truth)
+                            $paymentApplied = (float) ($invoice['payment_applied'] ?? 0);
+                            
+                            // CRITICAL: Payment should NEVER show credit value
+                            // If payment equals credit (and both > 0), it's wrong - treat as empty
+                            if ($paymentApplied > 0 && $creditApplied > 0 && abs($paymentApplied - $creditApplied) < 0.01) {
+                                $paymentApplied = 0;
+                            }
+                            
+                            // Calculate amount due BEFORE payment: original - credit
+                            $amountDueBeforePayment = max(0, $originalAmount - $creditApplied);
+                            // Calculate remaining amount due AFTER current payment
+                            $calculatedAmountDue = max(0, $amountDueBeforePayment - $paymentApplied);
+                            // Max payment is the original amount (allows paying full invoice even after credit)
+                            $maxPayment = $originalAmount;
+                            
+                            // Display value: empty string if 0, otherwise the payment_applied value
+                            $displayPayment = ($paymentApplied > 0) ? number_format($paymentApplied, 2, '.', '') : '';
+                        @endphp
+                        <input type="number" 
+                            step="0.01" 
+                            min="0"
+                            max="{{ $maxPayment }}"
+                            value="{{ $displayPayment }}"
+                            wire:model.defer="payments.{{ $invoice['id'] }}"
+                            wire:blur="updateSelectedInvoiceAmount({{ $invoice['id'] }})"
+                            onkeypress="return event.charCode >= 48 && event.charCode <= 57 || event.charCode === 46"
+                            class="text-right border rounded px-2 py-1 text-xs w-20 block ml-auto" 
+                            placeholder="0.00"
+                            title="Maximum payment: {{ number_format($maxPayment, 2) }} (Amount Due: {{ number_format($calculatedAmountDue, 2) }})"
+                            wire:key="payment-{{ $invoice['id'] }}-{{ $creditApplied }}-{{ $paymentApplied }}" />
 
                     </td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs font-medium">
-
-                        @if ($invoice['amount_due'] === 0 && $invoice['credit'] > 0)
-                        {{ $invoice['credit'] }}
-                        @else
-                        <input type="number" step="0.01" wire:model.lazy="payments.{{ $invoice['id'] }}"
-                            wire:change="updateSelectedInvoiceAmount({{ $invoice['id'] }})"
-                            class="text-right border rounded px-2 py-1 text-xs" />
-                        @endif
-
+                    <td class="whitespace-nowrap px-3 py-3 text-xs font-medium text-gray-900">
+                        @php
+                            $creditAmount = (float) ($invoice['credit'] ?? 0);
+                            $paymentAmount = (float) ($invoice['payment_applied'] ?? 0);
+                            $totalAmount = $creditAmount + $paymentAmount;
+                        @endphp
+                        <div class="text-right font-semibold">{{ number_format($totalAmount, 2) }}</div>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-3 py-8 text-center text-xs text-gray-500">
+                    <td colspan="8" class="px-3 py-8 text-center text-xs text-gray-500">
                         No unpaid invoices found for this customer.
                     </td>
                 </tr>
@@ -417,14 +498,16 @@
                 <tr class="font-bold bg-gray-100">
                     <td class="whitespace-nowrap py-3 pl-4 pr-3 text-xs sm:pl-6" colspan="3" style="padding-left:6%">
                         Totals</td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($totalOriginalAmount, 2) }}</td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($totalAmountDue, 2) }}</td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($totalCredit, 2) }}</td>
-                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
                         {{ number_format($totalPayment, 2) }}</td>
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 text-right">
+                        {{ number_format($totalCredit + $totalPayment, 2) }}</td>
                 </tr>
             </tbody>
         </table>
