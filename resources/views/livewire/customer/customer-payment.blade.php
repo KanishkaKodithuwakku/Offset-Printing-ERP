@@ -45,21 +45,41 @@
         </div>
         @endif
 
-
-        <!-- Header -->
-        <div class="flex justify-between  ">
-            <h1 class="text-medium font-bold text-gray-700">Customer Payment</h1>
-            <div class="text-right" style="padding-top: ">
-                <p class="text-xs text-gray-500">Customer Credit Balance</p>
-                <p class="text-xl font-bold text-error-500">{{ number_format($customerAvlCredits, 2) }}</p>
-                <p class="text-xs text-gray-500">Customer Due</p>
-                <p class="text-xl font-bold">{{ number_format($totalAmountDue, 2) }}</p>
+        <!-- Header and Form Side by Side - Always 3 Columns -->
+        <div class="flex gap-6 items-start mb-4">
+            <!-- Column 1: Title, Balance Boxes, and Payment Amount -->
+            <div class="flex-1">
+                <h1 class="text-medium font-bold text-gray-700 mb-3">Customer Payment</h1>
+                <div class="flex flex-col gap-2">
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Customer Credit Balance</p>
+                        <p class="text-5xl font-extrabold text-error-500 leading-none" style="font-size: 3rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($customerAvlCredits ?? 0, 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Customer Due</p>
+                        <p class="text-5xl font-extrabold text-gray-900 leading-none" style="font-size: 3rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($totalAmountDue ?? 0, 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Payment Amount</p>
+                        @if (! $paymentLocked)
+                        {{-- editable on first entry --}}
+                        <input type="number" step="0.01" wire:model="paymentAmount"
+                            wire:change="handlePaymentAmountChange"
+                            class="block w-full bg-transparent border-0 text-4xl font-extrabold text-gray-900 focus:outline-none focus:ring-0 p-0"
+                            placeholder="0.00" 
+                            style="font-size: 2.25rem; height: auto; line-height: 1;" />
+                        @else
+                        {{-- once locked, just show it --}}
+                        <div class="text-4xl font-extrabold text-gray-900 leading-none" style="font-size: 2.25rem; margin: 0 !important; line-height: 1 !important;">
+                            {{ number_format($initialPayment, 2) }}
+                        </div>
+                        @endif
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Customer Selection and Payment Form -->
-        <div class=" flex md:grid-cols-2 gap-6 ">
-            <div>
+            <!-- Column 2: Payment Form -->
+            <div class="flex-1">
                 <div class="mb-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Received From</label>
                     {{-- {{ $selectedCustomer->id ?? '' }} --}}
@@ -74,23 +94,6 @@
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Payment Amount</label>
-                    <div class="mt-1">
-                        @if (! $paymentLocked)
-                        {{-- editable on first entry --}}
-                        <input type="number" step="0.01" wire:model="paymentAmount"
-                            wire:change="handlePaymentAmountChange"
-                            class="block w-full rounded-md border border-gray-300 h-8 py-2 px-3 text-xs focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="0.00" />
-                        @else
-                        {{-- once locked, just show it --}}
-                        <div class="mt-1 text-sm font-semibold">
-                            {{ number_format($initialPayment, 2) }}
-                        </div>
-                        @endif
-                    </div>
-                </div>
-                <div class="mb-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">
                         Remaining to allocate
                     </label>
@@ -101,14 +104,13 @@
                 {{-- {{ $ledger_id }} --}}
                 {{--
                 <livewire:components.select-ledger-dropdown /> --}}
-                <label class="block text-xs font-medium text-gray-700 mb-1">Select the Bank</label>
-                <livewire:components.select-bank-ledger-dropdown :model="$ledger_id" :show-label="false" />
-            </div>
-
-            <div class="gap-6" style="width:12%;">
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Select the Bank</label>
+                    <livewire:components.select-bank-ledger-dropdown :model="$ledger_id" :show-label="false" />
+                </div>
 
                 <!-- Payment Method -->
-                <div>
+                <div class="mb-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">
                         Payment Method<span class="text-error-500">*</span>
                     </label>
@@ -158,26 +160,33 @@
                 </div>
             </div>
 
-            @if ($payment_method == 'CH')
-            <div class="flex flex-col gap-2.5" style="width: 12%;">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Bank</label>
-                    {{-- <input type="text" wire:model="bank_name"
-                        class="block w-full rounded-md border border-gray-300 py-2 px-3 text-xs text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-blue-500" />
-                    --}}
-                    {{-- {{ json_encode($bank_id) }} --}}
+            <!-- Column 3: Bank and Branch (Always visible, but fields shown only for Cheque) -->
+            <div class="flex-1">
+                @if ($payment_method == 'CH')
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Bank<span class="text-error-500">*</span></label>
                     <livewire:components.bank-select-with-add :selectedBank="$bank_id" />
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Branch</label>
-                    {{-- <input type="text" wire:model="branch_name"
-                        class="block w-full rounded-md border border-gray-300 py-2 px-3 text-xs text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-blue-500" />
-                    --}}
-                    {{-- {{ json_encode($branch_id) }} --}}
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Branch<span class="text-error-500">*</span></label>
                     <livewire:components.branch-select-with-add :selectedBranch="$branch_id" />
                 </div>
+                @else
+                {{-- Empty space when Cash is selected to maintain 3-column layout --}}
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Bank</label>
+                    <div class="block w-full rounded-md border border-gray-200 bg-gray-50 h-8 py-2 px-3 text-xs text-gray-400">
+                        N/A (Cash Payment)
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Branch</label>
+                    <div class="block w-full rounded-md border border-gray-200 bg-gray-50 h-8 py-2 px-3 text-xs text-gray-400">
+                        N/A (Cash Payment)
+                    </div>
+                </div>
+                @endif
             </div>
-            @endif
         </div>
 
         <!-- Credits Modal (Hidden by default) -->
