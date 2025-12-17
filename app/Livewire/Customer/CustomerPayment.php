@@ -96,6 +96,16 @@ class CustomerPayment extends Component
     {
         $this->selectedCustomerId = $value;
         $this->selectedCustomer = Customer::find($value);
+        
+        // CRITICAL: Clear all payment-related data when customer changes
+        // This prevents stale payment data from previous customer being applied to new customer
+        $this->payments = [];
+        $this->paymentAmount = 0;
+        $this->initialPayment = null;
+        $this->paymentLocked = false;
+        $this->remainingBalance = 0;
+        $this->selectedInvoices = [];
+        
         $this->loadCustomerInvoices();
         $this->loadCustomerTotalCredit();
     }
@@ -542,7 +552,7 @@ class CustomerPayment extends Component
 
         $filteredInvoices = collect($this->invoices)
             ->where('amount_due', '>', 0)
-            ->sortBy('date');
+            ->sortBy('created_at');  // Fixed: changed 'date' to 'created_at'
 
         logger('Filtered invoices count: ' . $filteredInvoices->count());
 
@@ -555,19 +565,25 @@ class CustomerPayment extends Component
             $remaining -= $amt;
         }
 
-        foreach ($this->invoices as &$invoice) {  // Use reference to update in place
+        // Update invoices array with payments - use map() instead of reference to ensure Livewire detects changes
+        $this->invoices = collect($this->invoices)->map(function ($invoice) {
             $invoiceId = $invoice['id'];
             if (isset($this->payments[$invoiceId])) {
-                // For example, reduce amount_due by payment amount
                 $paymentAmount = $this->payments[$invoiceId];
+                
+                // Fixed: Recalculate amount_due from original_amount minus credit and payment
+                $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+                $creditApplied = (float) ($invoice['credit'] ?? 0);
+                $invoice['amount_due'] = max(0, $originalAmount - $creditApplied - $paymentAmount);
 
-                // Update amount_due after payment
-                $invoice['amount_due'] = max(0, $invoice['amount_due'] - $paymentAmount);
-
-                // Optionally store payment amount on invoice if needed
+                // Store payment amount on invoice (this is what displays in TOTAL column)
                 $invoice['payment_applied'] = $paymentAmount;
+            } else {
+                // If no payment for this invoice, ensure payment_applied is 0
+                $invoice['payment_applied'] = 0;
             }
-        }
+            return $invoice;
+        })->toArray();
 
         $this->remainingBalance = max(0, $remaining);
         $this->calculateTotals();
@@ -808,9 +824,9 @@ class CustomerPayment extends Component
                 $this->selectedTotalAmountDue += $invoice['amount_due'];
             }
 
-            if (isset($this->payments[$invoice['id']])) {
-                $this->totalPayment += $this->payments[$invoice['id']];
-            }
+            // Use payment_applied from invoice array (source of truth) instead of payments array
+            $paymentApplied = (float) ($invoice['payment_applied'] ?? 0);
+            $this->totalPayment += $paymentApplied;
         }
 
         // Recalculate available credits after totals are calculated
@@ -881,6 +897,74 @@ class CustomerPayment extends Component
         try {
             $cust = Customer::findOrFail($this->customerId);
             $branchId = auth()->user()->branch_id;
+            
+            // CRITICAL: Clean up payments array - remove any invoice IDs that don't exist in current invoices list
+            // This prevents errors from stale data (e.g., invoice ID 1 from a previous customer)
+            $validInvoiceIds = collect($this->invoices)->pluck('id')->toArray();
+            $cleanedPayments = [];
+            $removedPayments = [];
+            foreach ($this->payments as $invId => $amt) {
+                $invId = (int) $invId;
+                // Only include payments for invoices that exist in the current invoices list
+                if ($invId > 0 && in_array($invId, $validInvoiceIds)) {
+                    $cleanedPayments[$invId] = $amt;
+                } else {
+                    // Track removed payments for logging
+                    if ($amt > 0) {
+                        $removedPayments[$invId] = $amt;
+                    }
+                }
+            }
+            
+            // Log if any payments were removed (for debugging)
+            if (!empty($removedPayments)) {
+                $removedTotal = array_sum($removedPayments);
+                \Log::warning('Removed invalid payments from array', [
+                    'customer_id' => $cust->id,
+                    'customer_name' => $cust->name,
+                    'removed_payments' => $removedPayments,
+                    'removed_total' => $removedTotal,
+                    'valid_invoice_ids' => $validInvoiceIds
+                ]);
+                
+                // Show user-friendly warning (but don't block the save)
+                session()->flash('warning', 'Some payment allocations were removed because they referenced invoices that are not in the current customer\'s invoice list. Removed amount: ' . number_format($removedTotal, 2));
+            }
+            
+            $this->payments = $cleanedPayments;
+            
+            // CRITICAL: Validate all payment invoices belong to selected customer BEFORE processing
+            foreach ($this->payments as $invId => $amt) {
+                // Skip null, empty, or zero amounts
+                if ($amt === null || $amt === '' || $amt <= 0) continue;
+                
+                // Validate invoice ID is a valid positive integer
+                $invId = (int) $invId;
+                if ($invId <= 0) {
+                    throw new \Exception("Invalid invoice ID: {$invId}. Payment amount: {$amt}");
+                }
+                
+                $inv = Invoice::find($invId);
+                if (!$inv) {
+                    throw new \Exception("Invoice ID {$invId} not found. This invoice may have been deleted or the payment data is stale. Please refresh the page and try again.");
+                }
+                if ($inv->customer_id != $cust->id) {
+                    throw new \Exception("Invoice #{$inv->invoice_number} (ID: {$invId}) belongs to a different customer. This usually happens when payment data from a previous customer session is still in memory. The invalid payment has been removed. Please check your payment allocations and try again.");
+                }
+            }
+            
+            // CRITICAL: Validate all credit invoices belong to selected customer BEFORE processing
+            foreach ($this->invoices as $invData) {
+                $use = $invData['credit'] ?? 0;
+                if ($use <= 0) continue;
+                $inv = Invoice::find($invData['id']);
+                if (!$inv) {
+                    throw new \Exception("Invoice ID {$invData['id']} not found.");
+                }
+                if ($inv->customer_id != $cust->id) {
+                    throw new \Exception("Invoice #{$inv->invoice_number} (ID: {$invData['id']}) does not belong to customer {$cust->name} (ID: {$cust->id}). Credit cannot be applied.");
+                }
+            }
 
             $bankLedgerId = $this->ledger_id;  // required if $totalCash > 0
             // $accountsReceivableLedgerId = Ledger::where('name', 'Accounts Receivable')->value('id');
@@ -942,8 +1026,22 @@ class CustomerPayment extends Component
 
                 // c) allocate across invoices & credit A/R
                 foreach ($this->payments as $invId => $amt) {
-                    if ($amt <= 0)
+                    // Skip null, empty, or zero amounts
+                    if ($amt === null || $amt === '' || $amt <= 0)
                         continue;
+                    
+                    // Validate invoice ID is a valid positive integer
+                    $invId = (int) $invId;
+                    if ($invId <= 0) {
+                        throw new \Exception("Invalid invoice ID: {$invId}. Payment amount: {$amt}");
+                    }
+                    
+                    // CRITICAL: Validate that invoice belongs to the selected customer
+                    $inv = Invoice::findOrFail($invId);
+                    if ($inv->customer_id != $cust->id) {
+                        throw new \Exception("Invoice #{$inv->invoice_number} (ID: {$invId}) does not belong to customer {$cust->name} (ID: {$cust->id}). Payment cannot be applied.");
+                    }
+                    
                     $allocated += $amt;
 
                     EntryItem::create([
@@ -963,7 +1061,6 @@ class CustomerPayment extends Component
                         'is_credit' => 0,
                     ]);
 
-                    $inv = Invoice::findOrFail($invId);
                     $inv->amount_due = max(0, $inv->amount_due - $amt);
                     $inv->payment_status = $inv->amount_due === 0 ? 'paid' : 'partial';
                     //$inv->status = $inv->amount_due === 0 ? 'invoiced' : 'invoicing';
@@ -999,6 +1096,13 @@ class CustomerPayment extends Component
                     $use = $invData['credit'] ?? 0;
                     if ($use <= 0)
                         continue;
+                    
+                    // CRITICAL: Validate that invoice belongs to the selected customer
+                    $inv = Invoice::findOrFail($invData['id']);
+                    if ($inv->customer_id != $cust->id) {
+                        throw new \Exception("Invoice #{$inv->invoice_number} (ID: {$invData['id']}) does not belong to customer {$cust->name} (ID: {$cust->id}). Credit cannot be applied.");
+                    }
+                    
                     $allocated += $use;
 
                     EntryItem::create([
@@ -1060,7 +1164,6 @@ class CustomerPayment extends Component
                     //     $ccRec->save();
                     // }
 
-                    $inv = Invoice::findOrFail($invData['id']);
                     $inv->amount_due = max(0, $inv->amount_due - $use);
                     $inv->payment_status = $inv->amount_due === 0 ? 'paid' : 'partial';
                     $inv->status = $inv->amount_due === 0 ? 'invoiced' : 'invoicing';
