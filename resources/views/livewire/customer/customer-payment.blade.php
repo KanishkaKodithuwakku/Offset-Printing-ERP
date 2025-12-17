@@ -624,6 +624,40 @@
                 </div>
             </div>
             <div class="flex-1">
+                <!-- Error Notification -->
+                @if (session('error'))
+                <div class="border border-error-500 rounded-md p-3 bg-error-50 mb-3">
+                    <div class="flex items-start gap-2">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs font-semibold text-error-700 mb-1">Error</p>
+                            <p class="text-xs text-error-600">{{ session('error') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Success Notification -->
+                @if (session('message') || session('success'))
+                <div class="border border-success-500 rounded-md p-3 bg-success-50 mb-3">
+                    <div class="flex items-start gap-2">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-success-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs font-semibold text-success-700 mb-1">Success</p>
+                            <p class="text-xs text-success-600">{{ session('message') ?? session('success') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="border rounded-md p-4 bg-gray-50">
                     <h3 class="font-medium text-sm text-gray-700 mb-4">Amount For Invoices</h3>
                     <div class="space-y-2">
