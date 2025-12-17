@@ -53,24 +53,30 @@
                 <div class="flex flex-col gap-2">
                     <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
                         <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Customer Credit Balance</p>
-                        <p class="text-5xl font-extrabold text-error-500 leading-none" style="font-size: 3rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($customerAvlCredits ?? 0, 2) }}</p>
+                        <p class="text-4xl font-extrabold text-error-500 leading-none" style="font-size: 2.25rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($customerAvlCredits ?? 0, 2) }}</p>
                     </div>
                     <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
                         <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Customer Due</p>
-                        <p class="text-5xl font-extrabold text-gray-900 leading-none" style="font-size: 3rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($totalAmountDue ?? 0, 2) }}</p>
+                        <p class="text-4xl font-extrabold text-gray-900 leading-none" style="font-size: 2.25rem; margin: 0 !important; line-height: 1 !important;">{{ number_format($totalAmountDue ?? 0, 2) }}</p>
                     </div>
-                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-200" style="min-height: 4.5rem;">
                         <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide" style="margin-bottom: 0.25rem !important;">Payment Amount</p>
                         @if (! $paymentLocked)
                         {{-- editable on first entry --}}
                         <input type="number" step="0.01" wire:model="paymentAmount"
                             wire:change="handlePaymentAmountChange"
-                            class="block w-full bg-transparent border-0 text-4xl font-extrabold text-gray-900 focus:outline-none focus:ring-0 p-0"
+                            @if($selectedCustomerId) 
+                                wire:key="payment-amount-{{ $selectedCustomerId }}"
+                                x-data
+                                x-init="setTimeout(() => { $el.focus(); $el.select(); }, 200)"
+                            @endif
+                            @if(!$selectedCustomerId) disabled @endif
+                            class="block w-full bg-white border-0 text-4xl font-extrabold focus:outline-none focus:ring-0 p-0 {{ $selectedCustomerId ? 'text-gray-900' : 'text-gray-400' }}"
                             placeholder="0.00" 
-                            style="font-size: 2.25rem; height: auto; line-height: 1;" />
+                            style="font-size: 2.25rem; height: 2.5rem; line-height: 1;" />
                         @else
                         {{-- once locked, just show it --}}
-                        <div class="text-4xl font-extrabold text-gray-900 leading-none" style="font-size: 2.25rem; margin: 0 !important; line-height: 1 !important;">
+                        <div class="text-4xl font-extrabold text-gray-900 leading-none bg-white p-1 rounded" style="font-size: 2.25rem; margin: 0 !important; line-height: 1 !important; min-height: 2.5rem;">
                             {{ number_format($initialPayment, 2) }}
                         </div>
                         @endif
@@ -183,6 +189,33 @@
                     <label class="block text-xs font-medium text-gray-500 mb-1">Branch</label>
                     <div class="block w-full rounded-md border border-gray-200 bg-gray-50 h-8 py-2 px-3 text-xs text-gray-400">
                         N/A (Cash Payment)
+                    </div>
+                </div>
+                @endif
+
+                @php
+                    $creditLimitProgress = $this->getCreditLimitProgress();
+                @endphp
+                @if($creditLimitProgress)
+                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200 mt-2">
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Credit Limit Usage</p>
+                    <div class="mb-1">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-600">Used: {{ number_format($creditLimitProgress['outstanding_balance'], 2) }}</span>
+                            <span class="text-gray-600">Limit: {{ number_format($creditLimitProgress['credit_limit'], 2) }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            @php
+                                $percentage = $creditLimitProgress['percentage_used'];
+                                $colorClass = $percentage >= 90 ? 'bg-error-500' : ($percentage >= 75 ? 'bg-error-400' : 'bg-success-500');
+                            @endphp
+                            <div class="h-3 rounded-full transition-all duration-300 {{ $colorClass }}" 
+                                 style="width: {{ $percentage }}%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs mt-1">
+                            <span class="text-gray-500">{{ number_format($percentage, 1) }}% Used</span>
+                            <span class="text-gray-500">Remaining: {{ number_format($creditLimitProgress['remaining_credit'], 2) }}</span>
+                        </div>
                     </div>
                 </div>
                 @endif
@@ -376,7 +409,26 @@
                     </th>
                     <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">AMT. DUE</th>
                     <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">CREDIT</th>
-                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">PAYMENT</th>
+                    <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">
+                        <div class="flex items-center justify-end gap-1">
+                            <span>PAYMENT</span>
+                            <span class="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+                                @if($totalPayment > 0)
+                                <button wire:click="clearAllPayments" 
+                                    class="text-error-500 hover:text-error-700 cursor-pointer" 
+                                    title="Clear all payments">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                                @else
+                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                                @endif
+                            </span>
+                        </div>
+                    </th>
                     <th scope="col" class="px-3 py-3.5 text-right text-xs font-semibold text-gray-500">TOTAL</th>
                 </tr>
             </thead>
@@ -472,18 +524,35 @@
                             // Display value: empty string if 0, otherwise the payment_applied value
                             $displayPayment = ($paymentApplied > 0) ? number_format($paymentApplied, 2, '.', '') : '';
                         @endphp
-                        <input type="number" 
-                            step="0.01" 
-                            min="0"
-                            max="{{ $maxPayment }}"
-                            value="{{ $displayPayment }}"
-                            wire:model.defer="payments.{{ $invoice['id'] }}"
-                            wire:blur="updateSelectedInvoiceAmount({{ $invoice['id'] }})"
-                            onkeypress="return event.charCode >= 48 && event.charCode <= 57 || event.charCode === 46"
-                            class="text-right border rounded px-2 py-1 text-xs w-20 block ml-auto" 
-                            placeholder="0.00"
-                            title="Maximum payment: {{ number_format($maxPayment, 2) }} (Amount Due: {{ number_format($calculatedAmountDue, 2) }})"
-                            wire:key="payment-{{ $invoice['id'] }}-{{ $creditApplied }}-{{ $paymentApplied }}" />
+                        <div class="flex items-center justify-end gap-1 ml-auto" style="width: fit-content; max-width: 100%;">
+                            <input type="number" 
+                                step="0.01" 
+                                min="0"
+                                max="{{ $maxPayment }}"
+                                value="{{ $displayPayment }}"
+                                wire:model.defer="payments.{{ $invoice['id'] }}"
+                                wire:blur="updateSelectedInvoiceAmount({{ $invoice['id'] }})"
+                                onkeypress="return event.charCode >= 48 && event.charCode <= 57 || event.charCode === 46"
+                                class="text-right border rounded px-2 py-1 text-xs w-20 flex-shrink-0" 
+                                placeholder="0.00"
+                                title="Maximum payment: {{ number_format($maxPayment, 2) }} (Amount Due: {{ number_format($calculatedAmountDue, 2) }})"
+                                wire:key="payment-{{ $invoice['id'] }}-{{ $creditApplied }}-{{ $paymentApplied }}" />
+                            <span class="flex-shrink-0 w-4 h-4 flex items-center justify-center" style="min-width: 16px;">
+                                @if($paymentApplied > 0)
+                                <button wire:click="clearPayment({{ $invoice['id'] }})" 
+                                    class="text-error-500 hover:text-error-700 cursor-pointer" 
+                                    title="Clear payment">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                                @else
+                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                                @endif
+                            </span>
+                        </div>
 
                     </td>
                     <td class="whitespace-nowrap px-3 py-3 text-xs font-medium text-gray-900">

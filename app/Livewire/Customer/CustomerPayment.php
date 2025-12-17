@@ -838,6 +838,80 @@ class CustomerPayment extends Component
         // dd($this->difference);
     }
 
+    public function getCreditLimitProgress()
+    {
+        if (!$this->selectedCustomer || !$this->selectedCustomer->is_credit_customer) {
+            return null;
+        }
+
+        // Get the maximum credit limit (use credit_limit_1_amount as primary, or credit_limit_2_amount if higher)
+        $creditLimit1 = (float) ($this->selectedCustomer->credit_limit_1_amount ?? 0);
+        $creditLimit2 = (float) ($this->selectedCustomer->credit_limit_2_amount ?? 0);
+        $creditLimit = max($creditLimit1, $creditLimit2);
+
+        if ($creditLimit <= 0) {
+            return null; // No credit limit set
+        }
+
+        // Current outstanding balance (amount_due from all invoices)
+        $outstandingBalance = (float) $this->totalAmountDue;
+
+        // Calculate percentage used
+        $percentageUsed = min(100, ($outstandingBalance / $creditLimit) * 100);
+        $remainingCredit = max(0, $creditLimit - $outstandingBalance);
+
+        return [
+            'credit_limit' => $creditLimit,
+            'outstanding_balance' => $outstandingBalance,
+            'remaining_credit' => $remainingCredit,
+            'percentage_used' => $percentageUsed,
+            'credit_limit_1' => $creditLimit1,
+            'credit_limit_2' => $creditLimit2,
+        ];
+    }
+
+    public function clearPayment($invoiceId)
+    {
+        // Clear payment for specific invoice
+        unset($this->payments[$invoiceId]);
+        
+        // Update invoice array to remove payment_applied
+        $this->invoices = collect($this->invoices)->map(function ($invoice) use ($invoiceId) {
+            if ($invoice['id'] == $invoiceId) {
+                $invoice['payment_applied'] = 0;
+                // Recalculate amount_due: original_amount - credit (payment is now 0)
+                $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+                $creditApplied = (float) ($invoice['credit'] ?? 0);
+                $invoice['amount_due'] = max(0, $originalAmount - $creditApplied);
+            }
+            return $invoice;
+        })->toArray();
+        
+        $this->recalculateRemaining();
+        $this->calculateTotals();
+    }
+
+    public function clearAllPayments()
+    {
+        // Clear all payments
+        $this->payments = [];
+        
+        // Update all invoices to remove payment_applied
+        $this->invoices = collect($this->invoices)->map(function ($invoice) {
+            $invoice['payment_applied'] = 0;
+            // Recalculate amount_due: original_amount - credit (payment is now 0)
+            $originalAmount = (float) ($invoice['original_amount'] ?? 0);
+            $creditApplied = (float) ($invoice['credit'] ?? 0);
+            $invoice['amount_due'] = max(0, $originalAmount - $creditApplied);
+            return $invoice;
+        })->toArray();
+        
+        $this->paymentAmount = 0;
+        $this->remainingBalance = 0;
+        $this->recalculateRemaining();
+        $this->calculateTotals();
+    }
+
     public function recalculateAvailableCredits()
     {
         if (!$this->selectedCustomerId) {
