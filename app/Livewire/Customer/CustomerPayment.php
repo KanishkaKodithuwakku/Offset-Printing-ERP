@@ -713,8 +713,7 @@ class CustomerPayment extends Component
                     $inv = Invoice::findOrFail($invId);
                     $inv->amount_due = max(0, $inv->amount_due - $amt);
                     $inv->payment_status = $inv->amount_due === 0 ? 'paid' : 'partial';
-                    //$inv->status = $inv->amount_due === 0 ? 'invoiced' : 'invoicing';
-                    $inv->status = $inv->amount_due === 0 ? 'invoiced' : 'invoiced';
+                    $inv->status = 'invoiced';
                     $inv->save();
                 }
             }
@@ -810,7 +809,7 @@ class CustomerPayment extends Component
                     $inv = Invoice::findOrFail($invData['id']);
                     $inv->amount_due = max(0, $inv->amount_due - $use);
                     $inv->payment_status = $inv->amount_due === 0 ? 'paid' : 'partial';
-                    $inv->status = $inv->amount_due === 0 ? 'invoiced' : 'invoicing';
+                    $inv->status = 'invoiced';
                     $inv->save();
                 }
             }
