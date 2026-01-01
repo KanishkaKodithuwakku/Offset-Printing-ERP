@@ -257,7 +257,19 @@
                                 </div>
                             </div>
 
-                            <h3 class="text-medium font-semibold text-gray-800 mb-4">Available Credits</h3>
+                            <!-- Available Credits and Remaining to Allocate Display -->
+                            <div class="mb-4 grid grid-cols-2 gap-4">
+                                <div class="border flex justify-between rounded-md p-4 bg-gray-50">
+                                    <h3 class="font-medium text-sm text-gray-700 mb-2">Available Credits</h3>
+                                    <p class="text-sm font-bold text-right">Rs. {{ number_format($availableCredits, 2) }}</p>
+                                </div>
+                                <div class="border flex justify-between rounded-md p-4 bg-gray-50">
+                                    <h3 class="font-medium text-sm text-gray-700 mb-2">Remaining to allocate</h3>
+                                    <p class="text-sm font-bold text-right">Rs. {{ number_format($remainingCreditToAllocate, 2) }}</p>
+                                </div>
+                            </div>
+
+                            <h3 class="text-medium font-semibold text-gray-800 mb-4">Credit Details</h3>
 
                             <!-- Credits Table -->
                             <div class="overflow-x-auto border border-gray-200 rounded-md">
@@ -366,6 +378,7 @@
                     <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">AMT. DUE</th>
                     <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">CREDIT</th>
                     <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">PAYMENT</th>
+                    <th scope="col" class="px-3 py-3.5 text-left text-xs font-semibold text-gray-500">TOT.PAID.AMT</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
@@ -394,15 +407,14 @@
 
                     </td>
                     <td class="whitespace-nowrap px-3 py-3 text-xs font-medium">
-
-                        @if ($invoice['amount_due'] === 0 && $invoice['credit'] > 0)
-                        {{ $invoice['credit'] }}
-                        @else
-                        <input type="number" step="0.01" wire:model.lazy="payments.{{ $invoice['id'] }}"
+                        <input type="number" step="0.01" wire:model.blur="payments.{{ $invoice['id'] }}"
                             wire:change="updateSelectedInvoiceAmount({{ $invoice['id'] }})"
-                            class="text-right border rounded px-2 py-1 text-xs" />
-                        @endif
-
+                            onblur="if(this.value !== '' && this.value !== null) { this.value = parseFloat(this.value || 0).toFixed(2); }"
+                            placeholder="0.00"
+                            class="text-right border rounded px-2 py-1 text-xs w-full {{ isset($payments[$invoice['id']]) && $payments[$invoice['id']] > 0 ? 'bg-green-50 border-green-300' : '' }}" />
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 font-semibold">
+                        {{ number_format(($invoice['credit'] ?? 0) + ($payments[$invoice['id']] ?? 0), 2) }}
                     </td>
                 </tr>
                 @empty
@@ -425,6 +437,8 @@
                         {{ number_format($totalCredit, 2) }}</td>
                     <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
                         {{ number_format($totalPayment, 2) }}</td>
+                    <td class="whitespace-nowrap px-3 py-3 text-xs text-gray-900 ">
+                        {{ number_format($totalCredit + $totalPayment, 2) }}</td>
                 </tr>
             </tbody>
         </table>
