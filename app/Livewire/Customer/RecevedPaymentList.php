@@ -6,7 +6,6 @@ use App\Models\Payment;
 use Carbon\Carbon;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Customer;
 
 class RecevedPaymentList extends Component
 {

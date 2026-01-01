@@ -20,7 +20,7 @@ class Payment extends Model
         'amount',
         'date',
         'cheque_date',
-        'method',
+        'method',         // "CA", "CH", "CR", "CA,CR", or "CH,CR"
         'check_number',
         'status',
         'deleted_by',
@@ -151,49 +151,88 @@ class Payment extends Model
     }
 
     /**
-     * Get the display method string (e.g., "CA,CR", "CH,CR", "Cash", "Cheque", or "CR")
+     * Get the display method string (e.g., "CA", "CH", "CR", "CA,CR", or "CH,CR")
+     * 
+     * Rules:
+     * - Credit only → "CR"
+     * - Cash only → "CA"
+     * - Cheque only → "CH"
+     * - Cash + Credit → "CA,CR"
+     * - Cheque + Credit → "CH,CR"
      */
     public function getDisplayMethodAttribute()
     {
-        $hasCredit = $this->hasCredit();
         $method = $this->method ?? '';
-
+        
+        // If method is already in the correct format (CR, CA,CH, CA,CR, CH,CR), return it directly
+        // This handles new payments where method is saved correctly
+        if (in_array($method, ['CR', 'CA', 'CH', 'CA,CR', 'CH,CR'])) {
+            return $method;
+        }
+        
+        // Fallback: For old records, determine method from EntryItems
+        $hasCredit = $this->hasCredit();
+        
         // If credit was used
         if ($hasCredit) {
-            // Check if there's actual cash/cheque payment
+            // DEFINITIVE CHECK: Check EntryItems for Bank/Cash ledger DEBITS
+            // In double-entry accounting:
+            // - When cash/cheque is RECEIVED: Debit Bank/Cash (dc='D'), Credit A/R (dc='C')
+            // - When credit is USED: Debit Customer Credit (dc='D'), Credit A/R (dc='C')
+            // For credit-only payments, NO EntryItems DEBIT Bank/Cash ledgers
+            // For cash/cheque payments, EntryItems DO DEBIT Bank/Cash ledgers
+            // This is the ONLY reliable indicator - ignore paymentDetails and method field
             $hasCashCheque = false;
-            if ($this->relationLoaded('paymentDetails')) {
-                $hasCashCheque = $this->paymentDetails->where('is_credit', 0)->isNotEmpty();
-            } else {
-                $hasCashCheque = $this->paymentDetails()->where('is_credit', 0)->exists();
+            
+            if ($this->entry_id) {
+                $bankLedgerIds = \App\Models\Ledger::whereIn('type', ['bank', 'cash'])->pluck('id');
+                if ($bankLedgerIds->isNotEmpty()) {
+                    if ($this->relationLoaded('entry') && $this->entry && $this->entry->relationLoaded('entryitems')) {
+                        // Check if ANY EntryItem DEBITS a Bank/Cash ledger
+                        // Debit (dc='D') to Bank/Cash means cash/cheque was actually received
+                        $hasCashCheque = $this->entry->entryitems
+                            ->whereIn('ledger_id', $bankLedgerIds)
+                            ->where('dc', 'D') // Debit to Bank/Cash means cash/cheque was received
+                            ->isNotEmpty();
+                    } else {
+                        // Query version - check if EntryItems exist that DEBIT Bank/Cash
+                        $hasCashCheque = \App\Models\EntryItem::where('entry_id', $this->entry_id)
+                            ->whereIn('ledger_id', $bankLedgerIds)
+                            ->where('dc', 'D') // Debit to Bank/Cash means cash/cheque was received
+                            ->exists();
+                    }
+                }
             }
             
-            // Also check payment amount as fallback
-            if (!$hasCashCheque && $this->amount > 0) {
-                $hasCashCheque = true;
-            }
-
-            // If credit-only (no cash/cheque), show CR only
+            // CRITICAL: EntryItems check is definitive
+            // If NO EntryItems DEBIT Bank/Cash, then it's credit-only, regardless of:
+            // - paymentDetails (might be incorrectly set)
+            // - method field (might be incorrectly set to CA/CH)
+            // - any other indicators
+            
+            // If credit-only (no Bank/Cash EntryItems found), show CR only
             if (!$hasCashCheque) {
                 return 'CR';
             }
 
-            // If both credit and cash/cheque, show combined
+            // If both credit and cash/cheque detected (Bank/Cash EntryItems exist), show combined
+            // Use method field to determine if it's CA,CR or CH,CR
             if ($hasCashCheque && $method) {
                 return $method . ',CR';
             }
 
-            // If only credit (no method set)
+            // If cash/cheque detected but no method set, default to CA,CR
+            if ($hasCashCheque) {
+                return 'CA,CR'; // Default to cash if method not set
+            }
+
+            // Fallback: credit-only
             return 'CR';
         }
 
-        // No credit used - show only payment method (cheque-only or cash-only payments)
+        // No credit used - show only payment method (CA or CH)
         if ($method) {
-            return match($method) {
-                'CA' => 'Cash',      // Cash-only payment
-                'CH' => 'Cheque',    // Cheque-only payment
-                default => $method
-            };
+            return $method; // Return "CA" or "CH" as-is
         }
 
         return 'N/A';

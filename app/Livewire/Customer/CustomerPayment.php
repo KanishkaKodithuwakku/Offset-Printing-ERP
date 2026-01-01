@@ -1061,12 +1061,18 @@ class CustomerPayment extends Component
                 ], $exchangeRate, $currency));
 
                 // b) record one Payment model
+                // Determine method: "CA", "CH", "CA,CR", or "CH,CR"
+                $paymentMethod = $this->payment_method; // CA or CH
+                if ($totalCredit > 0) {
+                    $paymentMethod = $this->payment_method . ',CR'; // CA,CR or CH,CR
+                }
+                
                 $payment = Payment::create([
                     'customer_id' => $cust->id,
                     'entry_id' => $entry->id,
                     'amount' => $this->initialPayment,
                     'date' => now(),
-                    'method' => $this->payment_method,
+                    'method' => $paymentMethod, // Save combined method: CA,CR or CH,CR
                     'check_number' => $this->check_number,
                     'cheque_date' => $this->paymentDate,
                     'bank_id' => $this->bank_id,
@@ -1164,12 +1170,13 @@ class CustomerPayment extends Component
             // 4) CREDIT portion
             if ($totalCredit > 0) {
                 if ($totalCash == 0) {
+                    // Credit-only payment - method should be "CR"
                     $payment = Payment::create([
                         'customer_id' => $cust->id,
                         'entry_id' => $entry->id,
                         'amount' => $this->initialPayment ?? 0,
                         'date' => now(),
-                        'method' => $this->payment_method,
+                        'method' => 'CR', // Credit-only payment
                         'check_number' => $this->check_number,
                         'cheque_date' => $this->paymentDate,
                         'bank_id' => $this->bank_id,
