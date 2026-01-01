@@ -153,7 +153,7 @@
                             </td>
                             <td class="py-2 text-sm text-gray-700 dark:text-gray-300">{{
                                 number_format($payment->credit_amount, 2) }}</td>
-                            <td class="py-2 text-sm text-gray-700 dark:text-gray-300">{{ $payment->method }}</td>
+                            <td class="py-2 text-sm text-gray-700 dark:text-gray-300">{{ $payment->display_method }}</td>
                             <td class="py-2 text-sm text-gray-700 dark:text-gray-300">
                                 {{ $payment->check_number ?? 'N/A' }}</td>
 

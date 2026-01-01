@@ -61,6 +61,25 @@
 
             <p >Received with thanks from <strong
                     style="text-transform: uppercase;">{{ strtoupper($payment->customer->name) }} .</strong></p>
+            <p>Payment Method: <b>
+                @php
+                    $displayMethod = $payment->display_method;
+                    // Convert to readable format for receipt
+                    if (str_contains($displayMethod, 'CA,CR')) {
+                        echo 'CASH & CREDIT';
+                    } elseif (str_contains($displayMethod, 'CH,CR')) {
+                        echo 'CHEQUE & CREDIT';
+                    } elseif ($displayMethod === 'CA' || $displayMethod === 'Cash') {
+                        echo 'CASH';
+                    } elseif ($displayMethod === 'CH' || $displayMethod === 'Cheque') {
+                        echo 'CHEQUE';
+                    } elseif ($displayMethod === 'CR') {
+                        echo 'CREDIT';
+                    } else {
+                        echo $displayMethod;
+                    }
+                @endphp
+            </b> | Date: {{ \Carbon\Carbon::parse($payment->date)->format('d-m-Y') }}</p>
             @if ($payment->method === 'CH')
                 <p> Cheque No. {{ $payment->check_number }} Cheque Date {{ $payment->cheque_date }}
                     <div>
@@ -75,8 +94,6 @@
                 </div>
 
                 </p>
-            @else
-                <p>Payment Method:<b> CASH </b>| Date: {{ \Carbon\Carbon::parse($payment->date)->format('d-m-Y') }}</p>
             @endif
             @if ($payment->status === 'cancelled')
             <div style="background: #fee2e2; color: #b91c1c; padding: 0.75rem 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; font-weight: bold; text-align: center;">
@@ -90,7 +107,7 @@
             <p style="margin-top: 1.5rem;">For The Sum Of Rupees
                 <strong>{{ number_format($total, 2) }}</strong> Being Part/Balance/Full Payment
             </p>
-            <p>For The Following {{ $payment->method === 'CH' ? 'Credit' : 'Cash' }} Invoices</p>
+            <p>For The Following Invoices</p>
         </div>
 
         <table
@@ -119,9 +136,39 @@
                             {{ number_format($detail->invoice->total_amount, 2) }}</td>
 
                         <td style="border: 1px solid black; padding: 0.25rem 0.75rem; text-align: right;">
-                            {{ $detail->is_credit
-                            ? 'CR ' . number_format($detail->amount, 2)
-                            : number_format($detail->amount, 2) }}
+                            @php
+                                // Check if this invoice has credit
+                                $hasCreditForInvoice = $invoicesWithCredit->contains($detail->invoice_id);
+                                $creditAmountForInvoice = $creditAmountsByInvoice->get($detail->invoice_id, 0);
+                                
+                                // Check if payment detail amount equals credit amount (credit-only)
+                                // If payment detail amount > credit amount, then there's cash/cheque too
+                                $isCreditOnly = $hasCreditForInvoice && abs($detail->amount - $creditAmountForInvoice) < 0.01;
+                                
+                                // Check if there's cash/cheque payment for this invoice
+                                // Payment detail with is_credit=0 and amount > credit amount means cash/cheque exists
+                                $hasCashForInvoice = !$detail->is_credit && $detail->amount > $creditAmountForInvoice;
+                                $hasBoth = $hasCreditForInvoice && $hasCashForInvoice;
+                                
+                                $methodPrefix = '';
+                                if ($isCreditOnly) {
+                                    // Credit only for this invoice
+                                    $methodPrefix = 'CR ';
+                                } elseif ($hasBoth) {
+                                    // Both cash/cheque and credit for this invoice
+                                    if ($payment->method === 'CA') {
+                                        $methodPrefix = 'CA,CR ';
+                                    } elseif ($payment->method === 'CH') {
+                                        $methodPrefix = 'CH,CR ';
+                                    } else {
+                                        $methodPrefix = 'CA,CR ';
+                                    }
+                                } elseif ($detail->is_credit) {
+                                    // Legacy: is_credit flag set
+                                    $methodPrefix = 'CR ';
+                                }
+                            @endphp
+                            {{ $methodPrefix }}{{ number_format($detail->amount, 2) }}
                         </td>
                     </tr>
                 @endforeach

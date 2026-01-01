@@ -19,7 +19,7 @@ class RecevedPaymentList extends Component
     public $endDate;
     public $customers;
     public $customerName = '';
-    public $paginationEnabled = true;
+    public $paginationEnabled = false;
     public $showSuggestions = false;
 
     public function applyFilters()
@@ -61,7 +61,7 @@ class RecevedPaymentList extends Component
     public function render()
     {
         $query = Payment::query()
-            ->with(['customer', 'bank', 'bankBranch'])
+            ->with(['customer', 'bank', 'bankBranch', 'creditApplications', 'customerCredit', 'paymentDetails', 'entry.entryitems'])
             ->withSum('paymentDetails', 'amount')
             ->where('status', '!=', 'cancelled'); // hide cancelled payments
 
@@ -112,7 +112,67 @@ class RecevedPaymentList extends Component
                 ->get();
         }
 
-        $bodyAttributes = 'x-data="{ page: \'RecevedPaymentsPrint\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
+        // Query customer credits (overpayments) within the selected date range
+        // Balance is calculated as: amount - sum of credit applications
+        $customerCreditsQuery = \App\Models\CustomerCredit::query()
+            ->whereNotNull('payment_id')
+            ->whereHas('payment', function ($q) {
+                if ($this->startDate) {
+                    $start = Carbon::createFromFormat('Y-m-d', $this->startDate)->startOfDay();
+                    $q->whereDate('created_at', '>=', $start);
+                }
+                if ($this->endDate) {
+                    $end = Carbon::createFromFormat('Y-m-d', $this->endDate)->endOfDay();
+                    $q->whereDate('created_at', '<=', $end);
+                }
+                $q->where('status', '!=', 'cancelled');
+            });
+
+        // Apply customer filter if selected
+        if (!empty($this->customerName)) {
+            $customerCreditsQuery->whereHas('customer', function ($q) {
+                $q->where('name', 'like', "%{$this->customerName}%");
+            });
+        }
+
+        // Get all credits and calculate balance dynamically
+        $allCredits = $customerCreditsQuery->with('applications')->get();
+        
+        // Calculate balance for each credit and filter out those with zero balance
+        $creditsWithBalance = $allCredits->map(function ($credit) {
+            $usedAmount = $credit->applications->sum('amount');
+            $balance = $credit->amount - $usedAmount;
+            return [
+                'customer_id' => $credit->customer_id,
+                'balance' => max(0, $balance) // Ensure non-negative
+            ];
+        })->filter(function ($credit) {
+            return $credit['balance'] > 0; // Only keep credits with remaining balance
+        });
+
+        // Group by customer and sum the balance
+        $creditResults = $creditsWithBalance->groupBy('customer_id')->map(function ($credits, $customerId) {
+            return [
+                'customer_id' => $customerId,
+                'total_credit' => $credits->sum('balance')
+            ];
+        })->values();
+
+        // Load customers for the results
+        $customerIds = $creditResults->pluck('customer_id')->unique();
+        $customers = \App\Models\Customer::whereIn('id', $customerIds)->get()->keyBy('id');
+
+        // Map results with customer data
+        $customerCredits = $creditResults->map(function ($credit) use ($customers) {
+            return [
+                'customer' => $customers->get($credit['customer_id']),
+                'total_credit' => $credit['total_credit']
+            ];
+        })->filter(function ($credit) {
+            return $credit['customer'] !== null; // Filter out any missing customers
+        });
+
+        $bodyAttributes = 'x-data="{ page: \'ReceiptList\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
             x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
                     $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
             :class="{\'dark bg-gray-900\': darkMode === true}"';
@@ -127,6 +187,7 @@ class RecevedPaymentList extends Component
             'customerName' => $this->customerName,
             'customerSuggestions' => $customerSuggestions,
             'showSuggestions' => $this->showSuggestions,
+            'customerCredits' => $customerCredits,
         ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
     }
 

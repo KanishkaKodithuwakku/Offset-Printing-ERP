@@ -949,6 +949,24 @@ class CustomerPayment extends Component
         return str_pad($next, $entryType->zero_padding ?? 0, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Helper method to build EntryItem data with conditional foreign currency columns
+     */
+    private function buildEntryItemData($baseData, $exchangeRate, $currency)
+    {
+        $data = $baseData;
+        
+        // Only add foreign currency columns if they exist in the table
+        if (DB::getSchemaBuilder()->hasColumn('entryitems', 'amount_foreign')) {
+            $data['amount_foreign'] = ($baseData['amount'] ?? 0) * $exchangeRate;
+        }
+        if (DB::getSchemaBuilder()->hasColumn('entryitems', 'currency_id')) {
+            $data['currency_id'] = $currency ? $currency->id : null;
+        }
+        
+        return $data;
+    }
+
     public function savePayment()
     {
         // 1) Totals for what the user entered:
@@ -988,12 +1006,21 @@ class CustomerPayment extends Component
             }
 
             // Get currency for exchange rate
-            $currency = DB::table('currencies')->first();
-            $exchangeRate = $currency ? (float) ($currency->exchange_rate ?? 1.0) : 1.0;
+            $currency = null;
+            $exchangeRate = 1.0;
+            try {
+                if (DB::getSchemaBuilder()->hasTable('currencies')) {
+                    $currency = DB::table('currencies')->first();
+                    $exchangeRate = $currency ? (float) ($currency->exchange_rate ?? 1.0) : 1.0;
+                }
+            } catch (\Exception $e) {
+                // Table doesn't exist, use default exchange rate of 1.0
+                $exchangeRate = 1.0;
+            }
             $totalAmount = $totalCash + $totalCredit;
 
             // 2) Create the single "receipt" journal entry
-            $entry = Entry::create([
+            $entryData = [
                 'entrytype_id' => $receiptTypeId,
                 'number' => Entry::getNextNumber($receiptTypeId),
                 'customer_id' => $cust->id,
@@ -1002,10 +1029,20 @@ class CustomerPayment extends Component
                 'narration' => $this->memo ?: "Payment from {$cust->name}",
                 'dr_total' => $totalAmount,
                 'cr_total' => 0,  // will fill in below
-                'dr_total_foreign' => $totalAmount * $exchangeRate,
-                'cr_total_foreign' => 0,  // will fill in below
-                'currency_id' => $currency ? $currency->id : null,
-            ]);
+            ];
+            
+            // Only add foreign currency columns if they exist in the table
+            if (DB::getSchemaBuilder()->hasColumn('entries', 'dr_total_foreign')) {
+                $entryData['dr_total_foreign'] = $totalAmount * $exchangeRate;
+            }
+            if (DB::getSchemaBuilder()->hasColumn('entries', 'cr_total_foreign')) {
+                $entryData['cr_total_foreign'] = 0;  // will fill in below
+            }
+            if (DB::getSchemaBuilder()->hasColumn('entries', 'currency_id')) {
+                $entryData['currency_id'] = $currency ? $currency->id : null;
+            }
+            
+            $entry = Entry::create($entryData);
 
             $allocated = 0;
 
@@ -1014,16 +1051,14 @@ class CustomerPayment extends Component
             // 3) CASH/CHECK portion
             if ($totalCash > 0) {
                 // a) debit bank
-                EntryItem::create([
+                EntryItem::create($this->buildEntryItemData([
                     'entry_id' => $entry->id,
                     'ledger_id' => $bankLedgerId,
                     'dc' => 'D',
                     'amount' => $this->initialPayment,
-                    'amount_foreign' => $this->initialPayment * $exchangeRate,
                     'customer_id' => $cust->id,
                     'branch_id' => $branchId,
-                    'currency_id' => $currency ? $currency->id : null,
-                ]);
+                ], $exchangeRate, $currency));
 
                 // b) record one Payment model
                 $payment = Payment::create([
@@ -1059,16 +1094,14 @@ class CustomerPayment extends Component
                     // Log payment allocation for debugging
                     logger("Processing payment for invoice {$invId}: amount = {$amt}");
 
-                    EntryItem::create([
+                    EntryItem::create($this->buildEntryItemData([
                         'entry_id' => $entry->id,
                         'ledger_id' => $arLedgerId,
                         'dc' => 'C',
                         'amount' => $amt,
-                        'amount_foreign' => $amt * $exchangeRate,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
-                        'currency_id' => $currency ? $currency->id : null,
-                    ]);
+                    ], $exchangeRate, $currency));
 
                     // Check if invoice also has credit - will combine in credit section
                     $invoiceData = collect($this->invoices)->firstWhere('id', $invId);
@@ -1159,27 +1192,23 @@ class CustomerPayment extends Component
                         continue;
                     $allocated += $use;
 
-                    EntryItem::create([
+                    EntryItem::create($this->buildEntryItemData([
                         'entry_id' => $entry->id,
                         'ledger_id' => $custCreditLedgerId,
                         'dc' => 'D',
                         'amount' => $use,
-                        'amount_foreign' => $use * $exchangeRate,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
-                        'currency_id' => $currency ? $currency->id : null,
-                    ]);
+                    ], $exchangeRate, $currency));
 
-                    EntryItem::create([
+                    EntryItem::create($this->buildEntryItemData([
                         'entry_id' => $entry->id,
                         'ledger_id' => $arLedgerId,
                         'dc' => 'C',
                         'amount' => $use,
-                        'amount_foreign' => $use * $exchangeRate,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
-                        'currency_id' => $currency ? $currency->id : null,
-                    ]);
+                    ], $exchangeRate, $currency));
 
                     // Check if this invoice also has a payment (cash/check) from current session
                     $sessionPaymentAmount = floatval($this->payments[$invData['id']] ?? 0);
@@ -1301,26 +1330,28 @@ class CustomerPayment extends Component
 
             // 5) Finalize journal totals (before remainingBalance)
             $entry->cr_total = $allocated;
-            $entry->cr_total_foreign = $allocated * $exchangeRate;
+            if (DB::getSchemaBuilder()->hasColumn('entries', 'cr_total_foreign')) {
+                $entry->cr_total_foreign = $allocated * $exchangeRate;
+            }
 
             // 6) NOW HANDLE ANY remainingBalance:
             //    (you've been keeping $this->remainingBalance = initialPayment - allocated)
             if ($this->remainingBalance > 0) {
                 // a) post the GL line to Customer Credit
-                EntryItem::create([
+                EntryItem::create($this->buildEntryItemData([
                     'entry_id' => $entry->id,
                     'ledger_id' => $custCreditLedgerId,
                     'dc' => 'C',
                     'amount' => $this->remainingBalance,
-                    'amount_foreign' => $this->remainingBalance * $exchangeRate,
                     'customer_id' => $cust->id,
                     'branch_id' => $branchId,
-                    'currency_id' => $currency ? $currency->id : null,
-                ]);
+                ], $exchangeRate, $currency));
 
                 // Add remainingBalance to credit totals
                 $entry->cr_total += $this->remainingBalance;
-                $entry->cr_total_foreign += $this->remainingBalance * $exchangeRate;
+                if (DB::getSchemaBuilder()->hasColumn('entries', 'cr_total_foreign')) {
+                    $entry->cr_total_foreign += $this->remainingBalance * $exchangeRate;
+                }
 
                 // b) persist it as a new CustomerCredit
                 $cc = CustomerCredit::firstOrNew([

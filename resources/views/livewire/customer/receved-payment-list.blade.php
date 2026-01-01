@@ -1,6 +1,6 @@
 <div class="p-6 bg-white border border-gray-300 rounded-md">
     <div class="mt-5 mb-4 text-lg font-semibold text-center">
-        <h2 style="font-size: 18px; font-weight: bold; margin: 0;">{{ config('app.company_name') }}</h2>
+        <h2 style="font-size: 18px; font-weight: bold; margin: 0;">{{ config('custom.company_name') }}</h2>
         Receipt List
     </div>
 
@@ -85,7 +85,7 @@
                         $payment->created_at->format('Y-m-d') }}</td>
                     <td class="px-4 py-2 text-sm whitespace-nowrap">{{ $payment->payment_code ?? 'N/A' }}</td>
                     <td class="px-4 py-2 text-sm whitespace-nowrap">{{ $payment->customer->name ?? 'N/A' }}</td>
-                    <td class="px-4 py-2 text-sm whitespace-nowrap">{{ $payment->method }}</td>
+                    <td class="px-4 py-2 text-sm whitespace-nowrap">{{ $payment->display_method }}</td>
                     <td class="px-4 py-2 text-sm whitespace-nowrap">{{ $payment->check_number ?? 'N/A' }}</td>
                     <td class="px-4 py-2 text-sm whitespace-nowrap">
                         @if ($payment->method === 'CH')
@@ -110,18 +110,73 @@
             <tfoot>
                 <tr class="bg-gray-100" style="border: 2px solid #000;">
                     <td colspan="7" class="px-3 py-2 text-sm font-semibold text-left text-gray-500"
-                        style="font-weight: bold">Total Amount:</td>
+                        style="font-weight: bold">Total Receipt Amount:</td>
                     <td class="px-4 py-2 text-sm font-semibold text-right text-gray-500" style="font-weight: bold">
-                        {{ number_format($payments->sum('payment_details_sum_amount'), 2) }}
+                        @php
+                            $total = is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator') 
+                                ? $payments->sum('payment_details_sum_amount') 
+                                : $payments->sum('payment_details_sum_amount');
+                        @endphp
+                        {{ number_format($total, 2) }}
                     </td>
                 </tr>
             </tfoot>
         </table>
     </div>
 
+    {{-- Customer Credits (Overpayments) Table --}}
+    @if (isset($customerCredits) && $customerCredits->count() > 0)
+    <div class="mt-6 customer-credits-table">
+        <h3 class="mb-3 text-lg font-semibold text-gray-800">Customer Credits (Overpayments)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full border divide-y">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-sm font-semibold text-left" style="width: 70%;">Customer Name</th>
+                        <th class="px-4 py-2 text-sm font-semibold text-right" style="width: 30%;">Credit Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y">
+                    @foreach ($customerCredits as $credit)
+                    <tr>
+                        <td class="px-4 py-2 text-sm" style="width: 70%;">{{ $credit['customer']->name ?? 'N/A' }}</td>
+                        <td class="px-4 py-2 text-sm text-right whitespace-nowrap" style="width: 30%;">
+                            {{ number_format($credit['total_credit'], 2) }}
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-100" style="border: 2px solid #000;">
+                        <td class="px-3 py-2 text-sm font-semibold text-left text-gray-500" style="font-weight: bold">
+                            Total Over Payments Amount:</td>
+                        <td class="px-4 py-2 text-sm font-semibold text-right text-gray-500" style="font-weight: bold">
+                            {{ number_format($customerCredits->sum('total_credit'), 2) }}
+                        </td>
+                    </tr>
+                    <tr class="bg-gray-200" style="border: 2px solid #000;">
+                        <td class="px-3 py-2 text-sm font-semibold text-left text-gray-700" style="font-weight: bold">
+                            Grand Total:</td>
+                        <td class="px-4 py-2 text-sm font-semibold text-right text-gray-700" style="font-weight: bold">
+                            @php
+                                $totalAmount = is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator') 
+                                    ? $payments->sum('payment_details_sum_amount') 
+                                    : $payments->sum('payment_details_sum_amount');
+                                $totalCredit = $customerCredits->sum('total_credit');
+                                $grandTotal = $totalAmount + $totalCredit;
+                            @endphp
+                            {{ number_format($grandTotal, 2) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    @endif
+
     <!-- Pagination -->
     <div class="flex items-center justify-between px-6 py-4 border-t dark:border-gray-800">
-        @if ($paginationEnabled)
+        @if ($paginationEnabled && is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator'))
         <div class="text-sm text-gray-600 dark:text-gray-400">
             Showing {{ $payments->firstItem() }} to {{ $payments->lastItem() }} of
             {{ $payments->total() }} entries
@@ -129,7 +184,7 @@
         @endif
 
         <div class="flex justify-between pagination">
-            @if ($paginationEnabled)
+            @if ($paginationEnabled && is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator'))
             <div class="flex justify-between pagination">
                 {{ $payments->links('vendor.pagination.custom-tailwind') }}
             </div>
@@ -140,11 +195,17 @@
 
 <script>
     function printPreview() {
-        // Clone the printable area to capture all dynamic content
+        // Create a print-friendly version of the content
         const printableElement = document.getElementById('printable-area');
-        const content = printableElement.innerHTML;
-
-        const win = window.open('', '_blank', 'width=800,height=600');
+        let content = printableElement.innerHTML;
+        
+        // Check if customer credits table exists and add it to content
+        const creditsTableContainer = document.querySelector('.customer-credits-table');
+        if (creditsTableContainer) {
+            // Get the table HTML from the container
+            const creditsTableHTML = creditsTableContainer.innerHTML;
+            content += '<div style="margin-top: 20px;">' + creditsTableHTML + '</div>';
+        }
 
         // Get the dates and customer data
         function formatDate(dateStr) {
@@ -183,7 +244,46 @@
                            statusFilter === 'CH' ? 'Cheque Receipt Listing' :
                            'Cheque/Cash Receipt Listing';
 
-        win.document.write(`
+        // Create a hidden iframe for printing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.left = '-9999px';
+        
+        let printExecuted = false;
+        
+        // Set up onload handler before appending to DOM
+        iframe.onload = function() {
+            if (printExecuted) return;
+            printExecuted = true;
+            
+            setTimeout(function() {
+                try {
+                    const win = iframe.contentWindow;
+                    if (win) {
+                        win.focus();
+                        win.print();
+                    }
+                    // Remove iframe after printing
+                    setTimeout(function() {
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                        }
+                    }, 100);
+                } catch (e) {
+                    console.error('Print error:', e);
+                }
+            }, 250);
+        };
+        
+        document.body.appendChild(iframe);
+        
+        // Get iframe document
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`
             <html>
             <head>
                 <title>Payment List - Print Preview</title>
@@ -264,11 +364,16 @@
                     tfoot tr {
                         page-break-inside: avoid;
                     }
+                    h3 {
+                        font-size: 14px;
+                        font-weight: bold;
+                        margin: 15px 0 10px 0;
+                    }
                 </style>
             </head>
             <body>
                 <div class="report-header">
-                    <div class="company-name">{{ config('app.company_name') }}</div>
+                    <div class="company-name">{{ config('custom.company_name') }}</div>
                     <div class="report-title">${reportTitle}</div>
                     <div class="customer-info">Customer: <span>${customerName}</span></div>
                     ${startDate && endDate ? `<div class="date-info">Selected From: ${startDate} To: ${endDate}</div>` : ''}
@@ -278,10 +383,28 @@
             </body>
             </html>
         `);
-
-        // Delay printing to ensure content is loaded
-        win.document.close();
-        win.focus();
-        win.print();
+        iframeDoc.close();
+        
+        // Fallback: if onload doesn't fire, print after a delay
+        setTimeout(function() {
+            if (!printExecuted) {
+                printExecuted = true;
+                try {
+                    const win = iframe.contentWindow;
+                    if (win && win.document.readyState === 'complete') {
+                        win.focus();
+                        win.print();
+                        // Remove iframe after printing
+                        setTimeout(function() {
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                        }, 100);
+                    }
+                } catch (e) {
+                    console.error('Print error:', e);
+                }
+            }
+        }, 500);
     }
 </script>

@@ -208,6 +208,7 @@ class PaymentList extends Component
     {
         // Default query excludes soft-deleted rows so cancelled receipts stay hidden
         $query = Payment::query()
+            ->with(['customer', 'bank', 'bankBranch', 'paymentDetails', 'entry'])
             ->withSum('paymentDetails', 'amount')
             ->withSum([
                 'paymentDetails as credit_amount' => function ($q) {
