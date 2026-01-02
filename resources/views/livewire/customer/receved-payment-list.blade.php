@@ -1,6 +1,6 @@
 <div class="p-6 bg-white border border-gray-300 rounded-md">
     <div class="mt-5 mb-4 text-lg font-semibold text-center">
-        <h2 style="font-size: 18px; font-weight: bold; margin: 0;">{{ config('custom.company_name') }}</h2>
+        <h2 style="font-size: 18px; font-weight: bold; margin: 0;">{{ config('app.company_name') }}</h2>
         Receipt List
     </div>
 
@@ -127,7 +127,7 @@
     {{-- Customer Credits (Overpayments) Table --}}
     @if (isset($customerCredits) && $customerCredits->count() > 0)
     <div class="mt-6 customer-credits-table">
-        <h3 class="mb-3 text-lg font-semibold text-gray-800">Customer Credits (Overpayments)</h3>
+        <h3 class="mb-3 text-lg font-semibold text-gray-800">Customer Credit Notes (Addition)</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full border divide-y">
                 <thead class="bg-gray-50">
@@ -156,7 +156,7 @@
                     </tr>
                     <tr class="bg-gray-200" style="border: 2px solid #000;">
                         <td class="px-3 py-2 text-sm font-semibold text-left text-gray-700" style="font-weight: bold">
-                            Grand Total:</td>
+                            Sub Total:</td>
                         <td class="px-4 py-2 text-sm font-semibold text-right text-gray-700" style="font-weight: bold">
                             @php
                                 $totalAmount = is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator') 
@@ -166,6 +166,82 @@
                                 $grandTotal = $totalAmount + $totalCredit;
                             @endphp
                             {{ number_format($grandTotal, 2) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    {{-- Payments with Credit Table --}}
+    @if (isset($paymentsWithCredit) && $paymentsWithCredit->count() > 0)
+    <div class="mt-6 payments-with-credit-table">
+        <h3 class="mb-3 text-lg font-semibold text-gray-800">Credit Notes Allocated Receipts (Diduction)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full border divide-y">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-sm font-semibold text-left">Receipt Date</th>
+                        <th class="px-4 py-2 text-sm font-semibold text-left">Receipt Number</th>
+                        <th class="px-4 py-2 text-sm font-semibold text-left">Customer Name</th>
+                        <th class="px-4 py-2 text-sm font-semibold text-right">Credit Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y">
+                    @foreach ($paymentsWithCredit as $item)
+                    <tr>
+                        <td class="px-4 py-2 text-sm whitespace-nowrap">
+                            {{ $item['payment']->date ?? $item['payment']->created_at->format('Y-m-d') }}
+                        </td>
+                        <td class="px-4 py-2 text-sm whitespace-nowrap">
+                            {{ $item['payment']->payment_code ?? 'N/A' }}
+                        </td>
+                        <td class="px-4 py-2 text-sm whitespace-nowrap">
+                            {{ $item['payment']->customer->name ?? 'N/A' }}
+                        </td>
+                        <td class="px-4 py-2 text-sm text-right whitespace-nowrap">
+                            {{ number_format($item['credit_amount'], 2) }}
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-100" style="border: 2px solid #000;">
+                        <td colspan="3" class="px-3 py-2 text-sm font-semibold text-left text-gray-500" style="font-weight: bold">
+                            Total Credit Amount:</td>
+                        <td class="px-4 py-2 text-sm font-semibold text-right text-gray-500" style="font-weight: bold">
+                            @php
+                                $totalCreditAmount = $paymentsWithCredit->sum('credit_amount');
+                            @endphp
+                            {{ number_format($totalCreditAmount, 2) }}
+                        </td>
+                    </tr>
+                    <tr class="bg-gray-100" style="border: 2px solid #000;">
+                        <td colspan="3" class="px-3 py-2 text-sm font-semibold text-left text-gray-800" style="font-weight: bold">
+                            Bank To Be Deposited:</td>
+                        <td class="px-4 py-2 text-sm font-semibold text-right text-gray-800" style="font-weight: bold">
+                            @php
+                                // Calculate Total Receipt Amount
+                                $totalReceiptAmount = is_a($payments, 'Illuminate\Pagination\LengthAwarePaginator') 
+                                    ? $payments->sum('payment_details_sum_amount') 
+                                    : $payments->sum('payment_details_sum_amount');
+                                
+                                // Check if Grand Total exists (if customerCredits table exists)
+                                $grandTotal = null;
+                                if (isset($customerCredits) && $customerCredits->count() > 0) {
+                                    $totalOverPayment = $customerCredits->sum('total_credit');
+                                    $grandTotal = $totalReceiptAmount + $totalOverPayment;
+                                }
+                                
+                                // Calculate Bank Deposit Amount
+                                // If grand total exists: bank deposit amount = grand total - Total Credit Amount
+                                // If grand total doesn't exist: bank deposit amount = Total Receipt Amount - Total Credit Amount
+                                $bankDepositAmount = $grandTotal !== null 
+                                    ? $grandTotal - $totalCreditAmount 
+                                    : $totalReceiptAmount - $totalCreditAmount;
+                            @endphp
+                            {{ number_format($bankDepositAmount, 2) }}
                         </td>
                     </tr>
                 </tfoot>
@@ -194,6 +270,9 @@
 </div>
 
 <script>
+    // Get company name from PHP
+    const companyName = @json(config('app.company_name', ''));
+    
     function printPreview() {
         // Create a print-friendly version of the content
         const printableElement = document.getElementById('printable-area');
@@ -205,6 +284,14 @@
             // Get the table HTML from the container
             const creditsTableHTML = creditsTableContainer.innerHTML;
             content += '<div style="margin-top: 20px;">' + creditsTableHTML + '</div>';
+        }
+
+        // Check if payments with credit table exists and add it to content
+        const paymentsWithCreditTableContainer = document.querySelector('.payments-with-credit-table');
+        if (paymentsWithCreditTableContainer) {
+            // Get the table HTML from the container
+            const paymentsWithCreditTableHTML = paymentsWithCreditTableContainer.innerHTML;
+            content += '<div style="margin-top: 20px;">' + paymentsWithCreditTableHTML + '</div>';
         }
 
         // Get the dates and customer data
@@ -373,7 +460,7 @@
             </head>
             <body>
                 <div class="report-header">
-                    <div class="company-name">{{ config('custom.company_name') }}</div>
+                    <div class="company-name">${companyName}</div>
                     <div class="report-title">${reportTitle}</div>
                     <div class="customer-info">Customer: <span>${customerName}</span></div>
                     ${startDate && endDate ? `<div class="date-info">Selected From: ${startDate} To: ${endDate}</div>` : ''}

@@ -171,6 +171,72 @@ class RecevedPaymentList extends Component
             return $credit['customer'] !== null; // Filter out any missing customers
         });
 
+        // Get payments that used credit (check EntryItems for Customer Credit debits)
+        $custCreditLedgerId = \App\Models\Ledger::where('name', 'Customer Credit')->value('id');
+        
+        $paymentsWithCreditQuery = Payment::query()
+            ->with(['customer', 'entry.entryitems'])
+            ->where('status', '!=', 'cancelled')
+            ->whereNotNull('entry_id');
+        
+        // Filter to only payments that have EntryItems debiting Customer Credit ledger
+        if ($custCreditLedgerId) {
+            $paymentsWithCreditQuery->whereHas('entry.entryitems', function ($q) use ($custCreditLedgerId) {
+                $q->where('ledger_id', $custCreditLedgerId)
+                  ->where('dc', 'D'); // Debit means credit was used
+            });
+        } else {
+            // If ledger doesn't exist, return empty collection
+            $paymentsWithCreditQuery->whereRaw('1 = 0');
+        }
+
+        // Apply same filters as main payments query
+        if (!empty($this->statusFilter) && $this->statusFilter !== 'ALL') {
+            $paymentsWithCreditQuery->where('method', $this->statusFilter);
+        }
+
+        if ($this->startDate) {
+            $start = Carbon::createFromFormat('Y-m-d', $this->startDate)->startOfDay();
+            $paymentsWithCreditQuery->whereDate('created_at', '>=', $start);
+        }
+
+        if ($this->endDate) {
+            $end = Carbon::createFromFormat('Y-m-d', $this->endDate)->endOfDay();
+            $paymentsWithCreditQuery->whereDate('created_at', '<=', $end);
+        }
+
+        if (!empty($this->customerName)) {
+            $paymentsWithCreditQuery->whereHas('customer', function ($q) {
+                $q->where('name', 'like', "%{$this->customerName}%");
+            });
+        }
+
+        // Get payments with credit and calculate total credit amount per payment
+        $paymentsWithCredit = $paymentsWithCreditQuery->orderBy('created_at', 'asc')->get()->map(function ($payment) use ($custCreditLedgerId) {
+            // Calculate total credit amount used in this payment
+            // Check EntryItems that debit Customer Credit ledger (dc='D')
+            // This is the most accurate way to determine credit usage
+            $totalCreditAmount = 0;
+            
+            if ($payment->entry_id && $custCreditLedgerId) {
+                // Get EntryItems that DEBIT Customer Credit ledger for this payment's entry
+                // Debit to Customer Credit means credit was USED to pay invoices
+                $creditEntryItems = \App\Models\EntryItem::where('entry_id', $payment->entry_id)
+                    ->where('ledger_id', $custCreditLedgerId)
+                    ->where('dc', 'D') // Debit means credit was used
+                    ->get();
+                
+                $totalCreditAmount = $creditEntryItems->sum('amount');
+            }
+            
+            return [
+                'payment' => $payment,
+                'credit_amount' => $totalCreditAmount
+            ];
+        })->filter(function ($item) {
+            return $item['credit_amount'] > 0; // Only show payments with credit > 0
+        });
+
         $bodyAttributes = 'x-data="{ page: \'ReceiptList\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
             x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
                     $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
@@ -187,6 +253,7 @@ class RecevedPaymentList extends Component
             'customerSuggestions' => $customerSuggestions,
             'showSuggestions' => $this->showSuggestions,
             'customerCredits' => $customerCredits,
+            'paymentsWithCredit' => $paymentsWithCredit,
         ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
     }
 
