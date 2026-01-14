@@ -20,6 +20,8 @@ class Entry extends Model
         'dr_total',
         'cr_total',
         'narration',
+        'check_no',
+        'method',
     ];
 
     protected $dates = ['date'];

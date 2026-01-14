@@ -1029,6 +1029,8 @@ class CustomerPayment extends Component
                 'narration' => $this->memo ?: "Payment from {$cust->name}",
                 'dr_total' => $totalAmount,
                 'cr_total' => 0,  // will fill in below
+                'check_no' => $this->check_number ?: null,
+                'method' => $this->payment_method ?: null,
             ];
             
             // Only add foreign currency columns if they exist in the table
@@ -1058,6 +1060,8 @@ class CustomerPayment extends Component
                     'amount' => $this->initialPayment,
                     'customer_id' => $cust->id,
                     'branch_id' => $branchId,
+                    'check_no' => $this->check_number ?: null,
+                    'method' => $this->payment_method ?: null,
                 ], $exchangeRate, $currency));
 
                 // b) record one Payment model
@@ -1107,6 +1111,8 @@ class CustomerPayment extends Component
                         'amount' => $amt,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
+                        'check_no' => $this->check_number ?: null,
+                        'method' => $this->payment_method ?: null,
                     ], $exchangeRate, $currency));
 
                     // Check if invoice also has credit - will combine in credit section
@@ -1206,6 +1212,8 @@ class CustomerPayment extends Component
                         'amount' => $use,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
+                        'check_no' => $this->check_number ?: null,
+                        'method' => $this->payment_method ?: null,
                     ], $exchangeRate, $currency));
 
                     EntryItem::create($this->buildEntryItemData([
@@ -1215,6 +1223,8 @@ class CustomerPayment extends Component
                         'amount' => $use,
                         'customer_id' => $cust->id,
                         'branch_id' => $branchId,
+                        'check_no' => $this->check_number ?: null,
+                        'method' => $this->payment_method ?: null,
                     ], $exchangeRate, $currency));
 
                     // Check if this invoice also has a payment (cash/check) from current session
@@ -1352,6 +1362,8 @@ class CustomerPayment extends Component
                     'amount' => $this->remainingBalance,
                     'customer_id' => $cust->id,
                     'branch_id' => $branchId,
+                    'check_no' => $this->check_number ?: null,
+                    'method' => $this->payment_method ?: null,
                 ], $exchangeRate, $currency));
 
                 // Add remainingBalance to credit totals

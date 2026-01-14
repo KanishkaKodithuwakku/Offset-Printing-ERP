@@ -349,6 +349,8 @@ class BillPaymentForm extends Component
                 'dr_total'     => $payment->amount,
                 'cr_total'     => $payment->amount,
                 'branch_id'    => auth()->user()->branch_id,
+                'check_no'     => $this->check_number ?: null,
+                'method'       => $this->payment_method ?: null,
             ]);
 
             // Debit Accounts Payable (liability down)
@@ -359,6 +361,8 @@ class BillPaymentForm extends Component
                 'dc'          => 'D',
                 'amount'      => $payment->amount,
                 'branch_id'   => auth()->user()->branch_id,
+                'check_no'    => $this->check_number ?: null,
+                'method'      => $this->payment_method ?: null,
             ]);
 
             // Credit Cash/Bank (asset down)
@@ -369,6 +373,8 @@ class BillPaymentForm extends Component
                 'dc'          => 'C',
                 'amount'      => $payment->amount,
                 'branch_id'   => auth()->user()->branch_id,
+                'check_no'    => $this->check_number ?: null,
+                'method'      => $this->payment_method ?: null,
             ]);
 
             // 5) Update the bill itself

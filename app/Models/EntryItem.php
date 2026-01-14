@@ -15,6 +15,8 @@ class EntryItem extends Model
         'amount',
         'dc',
         'reconciliation_date',
+        'check_no',
+        'method',
     ];
 
     protected $dates = ['reconciliation_date'];
