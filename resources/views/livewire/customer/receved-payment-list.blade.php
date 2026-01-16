@@ -234,12 +234,16 @@
                                     $grandTotal = $totalReceiptAmount + $totalOverPayment;
                                 }
                                 
+                                // Add today's overpayments to Bank Deposit Amount
+                                // Today's overpayments are CustomerCredit records created today (not credit allocations)
+                                $todayOverpaymentsAmount = $todayOverpayments ?? 0;
+                                
                                 // Calculate Bank Deposit Amount
-                                // If grand total exists: bank deposit amount = grand total - Total Credit Amount
-                                // If grand total doesn't exist: bank deposit amount = Total Receipt Amount - Total Credit Amount
+                                // If grand total exists: bank deposit amount = grand total - Total Credit Amount + Today's Overpayments
+                                // If grand total doesn't exist: bank deposit amount = Total Receipt Amount - Total Credit Amount + Today's Overpayments
                                 $bankDepositAmount = $grandTotal !== null 
-                                    ? $grandTotal - $totalCreditAmount 
-                                    : $totalReceiptAmount - $totalCreditAmount;
+                                    ? $grandTotal - $totalCreditAmount + $todayOverpaymentsAmount
+                                    : $totalReceiptAmount - $totalCreditAmount + $todayOverpaymentsAmount;
                             @endphp
                             {{ number_format($bankDepositAmount, 2) }}
                         </td>

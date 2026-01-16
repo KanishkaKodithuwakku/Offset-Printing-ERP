@@ -237,6 +237,40 @@ class RecevedPaymentList extends Component
             return $item['credit_amount'] > 0; // Only show payments with credit > 0
         });
 
+        // Calculate today's overpayments (not credit allocations)
+        // Overpayments are amounts credited to Customer Credit ledger from payments made today
+        // We check EntryItems that credit Customer Credit ledger (dc='C') for payments created today
+        $today = Carbon::today();
+        $custCreditLedgerId = \App\Models\Ledger::where('name', 'Customer Credit')->value('id');
+        $todayOverpayments = 0;
+        
+        if ($custCreditLedgerId) {
+            // Get payments created today
+            $todayPaymentsQuery = Payment::whereDate('created_at', $today)
+                ->where('status', '!=', 'cancelled')
+                ->whereNotNull('entry_id');
+            
+            // Apply customer filter if customer is selected
+            if (!empty($this->customerName)) {
+                $todayPaymentsQuery->whereHas('customer', function ($q) {
+                    $q->where('name', 'like', "%{$this->customerName}%");
+                });
+            }
+            
+            $todayPayments = $todayPaymentsQuery->pluck('entry_id');
+            
+            if ($todayPayments->isNotEmpty()) {
+                // Get EntryItems that credit Customer Credit ledger for today's payments
+                // Credit (dc='C') to Customer Credit means overpayment was created
+                $todayOverpaymentItems = \App\Models\EntryItem::whereIn('entry_id', $todayPayments)
+                    ->where('ledger_id', $custCreditLedgerId)
+                    ->where('dc', 'C') // Credit means overpayment was created
+                    ->get();
+                
+                $todayOverpayments = $todayOverpaymentItems->sum('amount');
+            }
+        }
+        
         $bodyAttributes = 'x-data="{ page: \'ReceiptList\', loaded: true, darkMode: false, stickyMenu: false, sidebarToggle: false, scrollTop: false }"
             x-init="darkMode = JSON.parse(localStorage.getItem(\'darkMode\'));
                     $watch(\'darkMode\', value => localStorage.setItem(\'darkMode\', JSON.stringify(value)))"
@@ -254,6 +288,7 @@ class RecevedPaymentList extends Component
             'showSuggestions' => $this->showSuggestions,
             'customerCredits' => $customerCredits,
             'paymentsWithCredit' => $paymentsWithCredit,
+            'todayOverpayments' => $todayOverpayments,
         ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);
     }
 
