@@ -34,7 +34,7 @@ class RecevedPaymentListPrint extends Component
     public function render()
     {
         $query = Payment::query()
-            ->with(['customer', 'bank', 'bankBranch'])
+            ->with(['customer', 'bank', 'bankBranch', 'creditApplications', 'customerCredit', 'paymentDetails', 'entry.entryitems'])
             ->withSum('paymentDetails', 'amount');
 
         if (!empty($this->statusFilter) && $this->statusFilter !== 'ALL') {

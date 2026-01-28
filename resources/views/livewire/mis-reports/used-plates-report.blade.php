@@ -7,7 +7,6 @@
     <div class="p-6" x-data="{ showPrint: false }">
 
         <div class="p-4 bg-white rounded shadow">
-            <!-- Filters Section -->
             <div class="flex gap-4 pb-4 no-print">
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700">Plate Name</label>
@@ -63,14 +62,14 @@
                  </div>
             </div>
 
-            <!-- Table Section -->
             <div id="print-section">
                 <div class="overflow-x-auto">
                     <table class="min-w-full mt-4 text-sm border-gray-200 table-auto">
                         <thead class="h-10 bg-gray-100">
                             <tr>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Plate Name</th>
-                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Plate Code</th>
+                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Job Number</th>
+                                <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Job Description</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Dispatch Number</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Customer Name</th>
                                 <th class="px-2 text-xs text-left text-gray-500 dark:text-gray-400">Quantity Used</th>
@@ -85,20 +84,21 @@
                                 @endphp
                                 <tr class="border-b border-gray-200">
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->item_name }}</td>
-                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->item_code }}</td>
+                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->job_number ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-xs text-left">{{ $plate->job_description ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->dispatch_number ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ $plate->customer_name ?? '-' }}</td>
                                     <td class="px-3 py-2 text-xs text-left">{{ number_format($quantity) }}</td>
                                 </tr>
                             @empty
                                 <tr class="border-b border-gray-200">
-                                    <td colspan="5" class="px-3 py-2 text-xs text-center text-gray-500">No used plates found for selected filters.</td>
+                                    <td colspan="6" class="px-3 py-2 text-xs text-center text-gray-500">No used plates found for selected filters.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         <tfoot>
                             <tr class="bg-gray-100">
-                                <td colspan="4" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
+                                <td colspan="5" class="px-3 py-2 text-xs font-semibold text-right">Total Used:</td>
                                 <td class="px-3 py-2 text-xs font-semibold text-left">{{ number_format($totalUsed) }}</td>
 
                             </tr>
@@ -113,7 +113,8 @@
             @endif
         </div>
     </div>
-
+    
+    {{-- MOVED STYLE AND SCRIPT INSIDE THE ROOT DIV --}}
     <style>
         @media print {
             body, table, th, td, h2, h3, div {
@@ -182,21 +183,61 @@
             }
          }
      </style>
-
      <script>
          function printReport() {
              // Get the print section
              const printContent = document.getElementById('print-section').cloneNode(true);
              const originalContent = document.body.innerHTML;
 
+             // Extract the total value from tfoot before removing it
+             const table = printContent.querySelector('table');
+             const tfoot = table ? table.querySelector('tfoot') : null;
+             let totalValue = '';
+             let totalRowCells = [];
+             if (tfoot) {
+                 const totalRow = tfoot.querySelector('tr');
+                 if (totalRow) {
+                     const cells = totalRow.querySelectorAll('td');
+                     cells.forEach(cell => {
+                         totalRowCells.push({
+                             text: cell.textContent.trim(),
+                             colspan: cell.getAttribute('colspan') || '1',
+                             className: cell.className,
+                             align: cell.style.textAlign || (cell.classList.contains('text-right') ? 'right' : 'left')
+                         });
+                     });
+                     const totalCell = totalRow.querySelector('td:last-child');
+                     totalValue = totalCell ? totalCell.textContent.trim() : '';
+                 }
+                 // Remove tfoot from the table so it doesn't repeat on every page
+                 tfoot.remove();
+             }
+
              // Create a new window for printing
              const printWindow = window.open('', '_blank');
 
-             // Get the report details
+             // Get the report details - read current date values from DOM inputs
              const reportTitle = 'Plate Consumption Detail Report';
-             const startDate = '{{ $startDate }}';
-             const endDate = '{{ $endDate }}';
+             // Find all date inputs and get their current values
+             const dateInputs = Array.from(document.querySelectorAll('input[type="date"]'));
+             const startDate = (dateInputs.length >= 1 && dateInputs[0].value) ? dateInputs[0].value : '{{ $startDate }}';
+             const endDate = (dateInputs.length >= 2 && dateInputs[1].value) ? dateInputs[1].value : '{{ $endDate }}';
              const companyName = '{{ config("app.company_name") }}';
+
+             // Build total row HTML if exists
+             let totalRowHtml = '';
+             if (totalRowCells.length > 0) {
+                 const cellsHtml = totalRowCells.map(function(cell, index) {
+                     let cellStyle = 'text-align: ' + cell.align + ';';
+                     // Reduce width of the last cell (right side)
+                     if (index === totalRowCells.length - 1) {
+                         cellStyle += ' width: 15%; max-width: 150px;';
+                     }
+                     return '<td colspan="' + cell.colspan + '" class="' + cell.className + '" style="' + cellStyle + '">' + cell.text + '</td>';
+                 }).join('');
+                 // NOTICE: I escaped the closing div tag below (<\/div>) to prevent parser errors
+                 totalRowHtml = '<div class="total-row-container"><table class="total-table"><tbody><tr>' + cellsHtml + '</tr></tbody></table><\/div>';
+             }
 
              // Write the HTML content
              printWindow.document.write(`
@@ -287,6 +328,32 @@
                              text-align: right;
                          }
 
+                         .total-row-container {
+                             margin-top: 20px;
+                             page-break-before: avoid;
+                             page-break-inside: avoid;
+                         }
+
+                         .total-table {
+                             width: 100%;
+                             border-collapse: collapse;
+                             border-left: 2px solid #000000;
+                             border-right: 2px solid #000000;
+                             margin-top: 20px;
+                         }
+
+                         .total-table td {
+                             border: 2px solid #000000;
+                             padding: 6px 8px;
+                             background-color: #f3f4f6;
+                             font-weight: bold;
+                         }
+
+                         .total-table td:last-child {
+                             width: 15%;
+                             max-width: 150px;
+                         }
+
                          @media print {
                              body {
                                  padding: 10px;
@@ -301,8 +368,10 @@
                              thead {
                                  display: table-header-group;
                              }
-                             tfoot {
-                                 display: table-footer-group;
+                             .total-row-container {
+                                 page-break-before: avoid;
+                                 page-break-inside: avoid;
+                                 display: block;
                              }
                          }
                      </style>
@@ -316,6 +385,7 @@
                          </div>
                      </div>
                      ${printContent.innerHTML}
+                     ${totalRowHtml}
                  </body>
                  </html>
              `);
@@ -339,5 +409,4 @@
              }
          });
      </script>
- </div>
-
+</div>

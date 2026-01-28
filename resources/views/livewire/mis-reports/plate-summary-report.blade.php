@@ -187,10 +187,12 @@
             // Create a new window for printing
             const printWindow = window.open('', '_blank');
 
-            // Get the report details
+            // Get the report details - read current date values from DOM inputs
             const reportTitle = 'Plate Consumption Summary Report';
-            const startDate = '{{ $startDate }}';
-            const endDate = '{{ $endDate }}';
+            // Find all date inputs and get their current values
+            const dateInputs = Array.from(document.querySelectorAll('input[type="date"]'));
+            const startDate = (dateInputs.length >= 1 && dateInputs[0].value) ? dateInputs[0].value : '{{ $startDate }}';
+            const endDate = (dateInputs.length >= 2 && dateInputs[1].value) ? dateInputs[1].value : '{{ $endDate }}';
             const companyName = '{{ config("app.company_name") }}';
 
             // Write the HTML content

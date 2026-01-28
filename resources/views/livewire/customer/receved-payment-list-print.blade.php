@@ -66,6 +66,7 @@
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Receipt Date</th>
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Receipt Number</th>
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Customer Name</th>
+                    <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Method</th>
                     @if ($statusFilter !== 'CA')
                         <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Cheque Date</th>
                         <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Cheque Number</th>
@@ -84,6 +85,8 @@
                             {{ $payment->payment_code ?? 'N/A' }}</td>
                         <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
                             {{ $payment->customer->name ?? 'N/A' }}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
+                            {{ $payment->display_method }}</td>
                         @if ($statusFilter !== 'CA')
                             <td style="border: 1px solid #ccc; padding: 8px; text-align: left;">
                                 @if ($payment->method === 'CH')
@@ -102,7 +105,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8"
+                        <td colspan="@if ($statusFilter !== 'CA') 9 @else 5 @endif"
                             style="text-align: center; border: 1px solid #ccc; padding: 12px; color: #888;">No payments
                             found.</td>
                     </tr>
@@ -110,7 +113,7 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="@if ($statusFilter !== 'CA') 7 @else 3 @endif" style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">Total</td>
+                    <td colspan="@if ($statusFilter !== 'CA') 8 @else 4 @endif" style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">Total</td>
                     <td style="border: 1px solid #ccc; padding: 8px; text-align: right; font-weight: bold;">
                         {{ number_format($payments->sum('payment_details_sum_amount'), 2) }}
                     </td>

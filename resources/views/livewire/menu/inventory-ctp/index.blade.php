@@ -19,7 +19,7 @@
         <!-- Menu Stock Summary -->
         <li>
             <a href="#" @click.prevent="selected = (selected === 'Items' ? '':'Items')" class="menu-item group" :class="(selected === 'Items') || (page === 'addItem' ||
-                        page === 'itemList' || page === 'inactiveItems' || page === 'archivedItems') ?
+                        page === 'itemList' || page === 'inactiveItems' || page === 'archivedItems' || page === 'DamagedItemList') ?
                     'menu-item-active' : 'menu-item-inactive'">
 
                 {{-- <svg :class="(selected === 'Items') || (page === 'addItem' ||
@@ -53,12 +53,24 @@
                             Stock Summary
                         </a>
                     </li>
+                    <li>
+                        <a wire:navigate href="{{ route('admin.damaged-list') }}" class="menu-dropdown-item group"
+                            :class="page === 'DamagedItemList' ? 'menu-dropdown-item-active' :
+                                            'menu-dropdown-item-inactive'">
+                            Damage Item List
+                            <span class="absolute right-3 flex items-center gap-1">
+                                <span class="menu-dropdown-badge" :class="page === 'DamagedItemList' ? 'menu-dropdown-badge-active' :
+                                                    'menu-dropdown-badge-inactive'">
+                                </span>
+                            </span>
+                        </a>
+                    </li>
                 </ul>
             </div>
             <!-- Dropdown Menu End -->
         </li>
         <!-- Menu Stock Summary -->
         @endif
-
+        
     </ul>
 </div>

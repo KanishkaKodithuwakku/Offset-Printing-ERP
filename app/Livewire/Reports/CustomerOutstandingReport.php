@@ -16,7 +16,7 @@ class CustomerOutstandingReport extends Component
     public $endDate;
     public $searchInvoice = '';
     public $perPage = 25;
-    public $paginationEnabled = true;
+    public $paginationEnabled = false;
     public $customers = [];
     public $selectedCustomerId = '';
 
@@ -54,9 +54,9 @@ class CustomerOutstandingReport extends Component
     :class="{\'dark bg-gray-900\': darkMode === true}"';
 
         $query = Invoice::with('order')
-            // Exclude 'cancelled' invoices
-            ->where('status', '!=', 'cancelled')
-            // ->where('payment_status', 'unpaid')
+            // Filter: status = 'invoiced' AND payment_status in ['partial', 'unpaid']
+            ->where('status', 'invoiced')
+            ->whereIn('payment_status', ['partial', 'unpaid'])
             ->when(
                 $this->searchInvoice,
                 fn($q) =>
@@ -79,13 +79,18 @@ class CustomerOutstandingReport extends Component
             ->orderBy('created_at', 'asc');
 
         if ($this->paginationEnabled) {
+            // Clone the query to get all invoices for totals (before pagination)
+            $allInvoices = (clone $query)->get();
+            // Then paginate for display
             $invoices = $query->paginate($this->perPage);
         } else {
             $invoices = $query->get();
+            $allInvoices = $invoices;
         }
 
         return view('livewire.reports.customer-outstanding-report', [
             'invoices' => $invoices,
+            'allInvoices' => $allInvoices,
             'customers' => $this->customers,
             'selectedCustomerId' => $this->selectedCustomerId,
         ])->layout('layouts.app', ['bodyAttributes' => $bodyAttributes]);

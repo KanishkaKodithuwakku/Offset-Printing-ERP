@@ -61,6 +61,25 @@
 
             <p >Received with thanks from <strong
                     style="text-transform: uppercase;">{{ strtoupper($payment->customer->name) }} .</strong></p>
+            <p>Payment Method: <b>
+                @php
+                    $displayMethod = $payment->display_method;
+                    // Convert to readable format for receipt
+                    if (str_contains($displayMethod, 'CA,CR')) {
+                        echo 'CASH & CREDIT';
+                    } elseif (str_contains($displayMethod, 'CH,CR')) {
+                        echo 'CHEQUE & CREDIT';
+                    } elseif ($displayMethod === 'CA' || $displayMethod === 'Cash') {
+                        echo 'CASH';
+                    } elseif ($displayMethod === 'CH' || $displayMethod === 'Cheque') {
+                        echo 'CHEQUE';
+                    } elseif ($displayMethod === 'CR') {
+                        echo 'CREDIT';
+                    } else {
+                        echo $displayMethod;
+                    }
+                @endphp
+            </b> | Date: {{ \Carbon\Carbon::parse($payment->date)->format('d-m-Y') }}</p>
             @if ($payment->method === 'CH')
                 <p> Cheque No. {{ $payment->check_number }} Cheque Date {{ $payment->cheque_date }}
                     <div>
@@ -75,8 +94,6 @@
                 </div>
 
                 </p>
-            @else
-                <p>Payment Method:<b> CASH </b>| Date: {{ \Carbon\Carbon::parse($payment->date)->format('d-m-Y') }}</p>
             @endif
             @if ($payment->status === 'cancelled')
             <div style="background: #fee2e2; color: #b91c1c; padding: 0.75rem 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; font-weight: bold; text-align: center;">
@@ -90,7 +107,7 @@
             <p style="margin-top: 1.5rem;">For The Sum Of Rupees
                 <strong>{{ number_format($total, 2) }}</strong> Being Part/Balance/Full Payment
             </p>
-            <p>For The Following {{ $payment->method === 'CH' ? 'Credit' : 'Cash' }} Invoices</p>
+            <p>For The Following Invoices</p>
         </div>
 
         <table
@@ -118,10 +135,62 @@
                         <td style="border: 1px solid black; padding: 0.25rem 0.75rem; text-align: right;">
                             {{ number_format($detail->invoice->total_amount, 2) }}</td>
 
-                        <td style="border: 1px solid black; padding: 0.25rem 0.75rem; text-align: right;">
-                            {{ $detail->is_credit
-                            ? 'CR ' . number_format($detail->amount, 2)
-                            : number_format($detail->amount, 2) }}
+                        <td style="border: 1px solid black; padding: 0; text-align: right;">
+                            @php
+                                // Check if this invoice has credit
+                                $hasCreditForInvoice = $invoicesWithCredit->contains($detail->invoice_id);
+                                $creditAmountForInvoice = $creditAmountsByInvoice->get($detail->invoice_id, 0);
+                                
+                                // Check if payment detail amount equals credit amount (credit-only)
+                                // If payment detail amount > credit amount, then there's cash/cheque too
+                                $isCreditOnly = $hasCreditForInvoice && abs($detail->amount - $creditAmountForInvoice) < 0.01;
+                                
+                                // Check if there's cash/cheque payment for this invoice
+                                // If credit was used AND total amount > credit amount, then cash/cheque exists too
+                                $hasBoth = $hasCreditForInvoice && $creditAmountForInvoice > 0 && $detail->amount > $creditAmountForInvoice;
+                                
+                                // Calculate cash/cheque amount
+                                $cashAmount = $hasBoth ? ($detail->amount - $creditAmountForInvoice) : 0;
+                                
+                                // Determine cash/cheque method prefix
+                                $cashMethod = 'CA';
+                                if ($payment->method === 'CH' || $payment->method === 'CH,CR') {
+                                    $cashMethod = 'CH';
+                                }
+                            @endphp
+                            
+                            @if($hasBoth)
+                                {{-- Show breakdown in nested table (2 rows x 2 columns) --}}
+                                <table style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+                                    <tr>
+                                        <td style="border-right: 1px solid black; border-bottom: 1px solid black; padding: 0.25rem 0.5rem; text-align: left; font-size: 0.875rem;">CR</td>
+                                        <td style="border-bottom: 1px solid black; padding: 0.25rem 0.5rem; text-align: right; font-size: 0.875rem;">{{ number_format($creditAmountForInvoice, 2) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border-right: 1px solid black; padding: 0.25rem 0.5rem; text-align: left; font-size: 0.875rem;">{{ $cashMethod }}</td>
+                                        <td style="padding: 0.25rem 0.5rem; text-align: right; font-size: 0.875rem;">{{ number_format($cashAmount, 2) }}</td>
+                                    </tr>
+                                </table>
+                            @else
+                                {{-- Show single amount with prefix --}}
+                                @php
+                                    $methodPrefix = '';
+                                    if ($isCreditOnly) {
+                                        // Credit only for this invoice
+                                        $methodPrefix = 'CR ';
+                                    } elseif ($detail->is_credit) {
+                                        // Legacy: is_credit flag set
+                                        $methodPrefix = 'CR ';
+                                    } elseif ($payment->method === 'CA' || $payment->method === 'CA,CR') {
+                                        $methodPrefix = 'CA ';
+                                    } elseif ($payment->method === 'CH' || $payment->method === 'CH,CR') {
+                                        $methodPrefix = 'CH ';
+                                    }
+                                @endphp
+                                <div style="padding: 0.25rem 0.75rem;">
+                                    {{ $methodPrefix }}{{ number_format($detail->amount, 2) }}
+                                </div>
+                            @endif
                         </td>
                     </tr>
                 @endforeach
@@ -149,7 +218,7 @@
                 </svg>
                 Back
             </button>
-            <button id="print-button" onclick="window.print()" wire:click="$refresh"
+            <button id="print-button" onclick="printPreview()" wire:click="$refresh"
                 style="display: flex; align-items: right; gap: 0.5rem; font-family: 'Open Sans', sans-serif; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; border-radius: 0.375rem; background-color: #465FFF; box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1); border: none; cursor: pointer; margin-right: 2.5rem;">
                 <svg style="width: 1.5rem; height: 1.5rem; color: white;" aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -160,3 +229,125 @@
             </button>
         </div>
     </div>
+
+<script>
+    function printPreview() {
+        // Get the printable area element
+        const printableElement = document.getElementById('printable-area');
+        if (!printableElement) {
+            alert('Print area not found');
+            return;
+        }
+        
+        // Clone the element to avoid modifying the original
+        const clone = printableElement.cloneNode(true);
+        
+        // Remove the style tag from clone
+        const styleTag = clone.querySelector('style');
+        if (styleTag) styleTag.remove();
+        
+        // Remove buttons and their parent container from the clone
+        const printButton = clone.querySelector('#print-button');
+        const backButton = clone.querySelector('#back-button');
+        const buttonContainer = clone.querySelector('div[style*="margin-top: 1.5rem"][style*="display: flex"]');
+        
+        if (printButton) printButton.remove();
+        if (backButton) backButton.remove();
+        // Remove the button container div entirely
+        if (buttonContainer) {
+            buttonContainer.remove();
+        }
+        
+        // Get the inner div that contains the actual content
+        const innerDiv = clone.querySelector('div[style*="max-width"]');
+        let content = '';
+        if (innerDiv) {
+            content = innerDiv.outerHTML;
+        } else {
+            // Fallback: get all content except style and buttons
+            content = clone.innerHTML;
+        }
+
+        const win = window.open('', '_blank', 'width=800,height=600');
+        
+        if (!win) {
+            alert('Please allow popups for this site');
+            return;
+        }
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Payment Receipt - Print Preview</title>
+                <meta charset="UTF-8">
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 10mm;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: 'Open Sans', sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: white;
+                    }
+                    #printable-area {
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Open Sans', sans-serif;
+                    }
+                    #printable-area > div {
+                        max-width: 100%;
+                        margin: 0 auto;
+                        padding: 1.5rem;
+                        font-family: 'Open Sans', sans-serif;
+                        background-color: white;
+                    }
+                    .no-print,
+                    #print-button,
+                    #back-button {
+                        display: none !important;
+                    }
+                    table {
+                        width: 100%;
+                        font-size: 0.875rem;
+                        border: 1px solid black;
+                        border-collapse: collapse;
+                        margin-bottom: 1rem;
+                    }
+                    th, td {
+                        border: 1px solid black;
+                        padding: 0.5rem;
+                    }
+                    thead {
+                        background-color: #f7f8f8;
+                    }
+                    h2 {
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                    p {
+                        margin: 0.5rem 0;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="printable-area" style="width: 100%; margin: 0; padding: 0; font-family: 'Open Sans', sans-serif;">
+                    ${content}
+                </div>
+            </body>
+            </html>
+        `);
+
+        // Delay printing to ensure content is loaded
+        win.document.close();
+        win.focus();
+        win.print();
+    }
+</script>

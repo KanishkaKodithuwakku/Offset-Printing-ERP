@@ -60,4 +60,9 @@ class CustomerCredit extends Model
     {
         return $this->hasMany(CreditApplication::class);
     }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
+    }
 }

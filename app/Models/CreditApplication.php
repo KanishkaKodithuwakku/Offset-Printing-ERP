@@ -15,6 +15,8 @@ class CreditApplication extends Model
         'customer_credit_id',
         'invoice_id',
         'amount',         // Amount of credit applied to invoice
+        'amount_applied', // Database column name
+        'applied_date',
         'created_at',
         'updated_at',
     ];
